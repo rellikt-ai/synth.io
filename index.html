@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Synth — Discord Bot</title>
+  <meta name="description" content="Synth — мощный многофункциональный Discord-бот: эмбеды, тикеты, модерация и аналитика."/>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['Orbitron', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --neon-cyan: #06b6d4;
+      --neon-blue: #3b82f6;
+      --neon-purple: #a855f7;
+      --neon-pink: #ec4899;
+    }
+
+    * { box-sizing: border-box; }
+    body { 
+      font-family: 'Inter', sans-serif; 
+      background: #050510; 
+      overflow-x: hidden; 
+      color: #e5e7eb;
+    }
+    html { scroll-behavior: smooth; }
+
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #0a0a1a; }
+    ::-webkit-scrollbar-thumb { background: linear-gradient(var(--neon-cyan), var(--neon-purple)); border-radius: 4px; }
+
+    .neon-text-cyan { color: var(--neon-cyan); text-shadow: 0 0 5px rgba(6,182,212,0.3); }
+    .neon-text-purple { color: var(--neon-purple); text-shadow: 0 0 5px rgba(168,85,247,0.3); }
+
+    .gradient-text {
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-blue), var(--neon-purple));
+      background-size: 300% 300%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: gradient-shift 4s ease infinite;
+    }
+    @keyframes gradient-shift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    .neon-box {
+      position: relative;
+      background: rgba(10, 10, 30, 0.6);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(6,182,212,0.2);
+      transition: all 0.4s ease;
+    }
+    .neon-box:hover { border-color: rgba(6,182,212,0.4); transform: translateY(-4px); }
+    .neon-box-purple { border-color: rgba(168,85,247,0.2); }
+    .neon-box-purple:hover { border-color: rgba(168,85,247,0.4); }
+
+    .btn-neon {
+      position: relative;
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-blue));
+      color: #fff;
+      font-weight: 700;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+    .btn-neon:hover { transform: translateY(-3px); box-shadow: 0 0 20px rgba(6,182,212,0.4); }
+    .btn-neon-outline {
+      background: transparent;
+      color: var(--neon-cyan);
+      border: 1px solid var(--neon-cyan);
+      transition: all 0.3s ease;
+    }
+    .btn-neon-outline:hover { background: rgba(6,182,212,0.1); transform: translateY(-3px); }
+
+    .neon-grid-bg {
+      position: absolute; inset: 0;
+      background-image: linear-gradient(rgba(6,182,212,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(6,182,212,0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+      mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
+      -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
+    }
+    .neon-orb {
+      position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.25;
+      animation: orb-float 8s ease-in-out infinite;
+    }
+    @keyframes orb-float {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(-20px, 20px) scale(0.9); }
+    }
+
+    .nav-link { position: relative; transition: color 0.3s ease; color: #9ca3af; }
+    .nav-link:hover { color: var(--neon-cyan); }
+    .nav-link::after {
+      content: ''; position: absolute; bottom: -4px; left: 0; width: 0; height: 1px;
+      background: var(--neon-cyan); transition: width 0.3s ease;
+    }
+    .nav-link:hover::after { width: 100%; }
+
+    .neon-divider { height: 1px; background: linear-gradient(90deg, transparent, rgba(6,182,212,0.3), rgba(168,85,247,0.3), transparent); }
+    .terminal { background: rgba(5, 5, 20, 0.9); border: 1px solid rgba(6,182,212,0.2); }
+    .faq-btn i { transition: transform 0.3s ease, color 0.3s ease; }
+    .faq-active i { transform: rotate(180deg); color: var(--neon-cyan); }
+    .discord-embed { background: rgba(20, 20, 40, 0.8); border-left: 3px solid var(--neon-cyan); }
+
+    .fade-in { opacity: 0; transform: translateY(40px); transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+    .delay-100 { transition-delay: 0.1s; }
+    .delay-200 { transition-delay: 0.2s; }
+    .delay-300 { transition-delay: 0.3s; }
+
+    .pricing-card {
+      background: rgba(10, 10, 30, 0.6);
+      border: 1px solid rgba(6,182,212,0.2);
+      border-radius: 16px; padding: 32px; transition: all 0.3s ease;
+    }
+    .pricing-card:hover { border-color: rgba(6,182,212,0.4); transform: translateY(-4px); }
+    .pricing-card.premium { border-color: rgba(168,85,247,0.4); background: rgba(20, 10, 40, 0.7); }
+    .pricing-card.premium:hover { border-color: rgba(168,85,247,0.6); }
+    .pricing-card h3 { color: #fff; font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+    .pricing-card .price { font-size: 48px; font-weight: 800; margin: 16px 0; }
+    .pricing-card .price span { font-size: 16px; color: #9ca3af; font-weight: 400; }
+    .pricing-card .features { list-style: none; padding: 0; margin: 24px 0; }
+    .pricing-card .features li { padding: 10px 0; color: #d1d5db; display: flex; align-items: flex-start; gap: 10px; }
+    .pricing-card .features li i { color: var(--neon-cyan); margin-top: 3px; }
+    .pricing-card.premium .features li i { color: var(--neon-purple); }
+    .pricing-card .badge { display: inline-block; background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink)); color: #fff; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-bottom: 12px; }
+
+    .particle { position: absolute; width: 2px; height: 2px; border-radius: 50%; animation: particle-rise linear infinite; }
+    @keyframes particle-rise {
+      0% { transform: translateY(100vh) scale(0); opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { transform: translateY(-100px) scale(1); opacity: 0; }
+    }
+
+    .interface-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start; }
+    @media (max-width: 900px) { .interface-grid { grid-template-columns: 1fr; } }
+    
+    .dc-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #5865F2; color: #fff; font-weight: 600; font-size: 13px;
+      padding: 8px 14px; border-radius: 4px; cursor: default; transition: filter 0.2s;
+    }
+    .dc-btn:hover { filter: brightness(1.1); }
+    .dc-btn.secondary { background: #4e5058; }
+    .dc-btn.success { background: #248046; }
+    .dc-btn.danger { background: #da373c; }
+  </style>
+</head>
+
+<body>
+  <!-- ===== FLOATING PARTICLES ===== -->
+  <div id="particles" class="fixed inset-0 z-0 pointer-events-none overflow-hidden"></div>
+
+  <!-- ===== NAVIGATION ===== -->
+  <nav class="fixed w-full z-50 bg-[#050510]/80 backdrop-blur-xl border-b border-cyan-500/20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <a href="#" class="flex items-center gap-3 group">
+          <div class="relative w-9 h-9 rounded-lg overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-br from-cyan-400 via-purple-500 to-pink-500 animate-[gradient-shift_3s_ease_infinite]"></div>
+            <span class="relative z-10 w-full h-full flex items-center justify-center text-black font-black text-sm">S</span>
+          </div>
+          <span class="font-mono font-bold text-xl tracking-wider text-white group-hover:text-cyan-400 transition-colors duration-300">SYNTH</span>
+        </a>
+        
+        <div class="hidden md:flex items-center gap-8">
+          <a href="#features" class="nav-link text-sm">Возможности</a>
+          <a href="#interface" class="nav-link text-sm">Интерфейс</a>
+          <a href="#pricing" class="nav-link text-sm">Тарифы</a>
+          <a href="#faq" class="nav-link text-sm">FAQ</a>
+        </div>
+        
+        <div class="hidden md:flex items-center gap-3">
+          <!-- Кнопка ВОЙТИ (ведет в панель управления) -->
+          <a href="/api/auth/discord" class="text-sm text-gray-400 nav-link">Войти</a>
+          
+          <!-- Кнопка ДОБАВИТЬ БОТА (открывает меню установки) -->
+          <a href="https://discord.com/api/oauth2/authorize?client_id=1107807820604248126&permissions=8&scope=bot%20applications.commands" 
+             class="btn-neon px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 cursor-pointer">
+            <i class="fab fa-discord"></i> Добавить
+          </a>
+        </div>
+        
+        <button id="mobile-btn" class="md:hidden p-2 rounded-lg hover:bg-white/5 transition text-white" aria-label="Menu">
+          <i class="fas fa-bars text-lg"></i>
+        </button>
+      </div>
+    </div>
+    
+    <div id="mobile-menu" class="hidden md:hidden bg-[#0a0a1a] border-t border-cyan-500/20">
+      <div class="px-4 py-4 space-y-1">
+        <a href="#features" class="block py-3 text-gray-400 hover:text-cyan-400 transition">Возможности</a>
+        <a href="#interface" class="block py-3 text-gray-400 hover:text-cyan-400 transition">Интерфейс</a>
+        <a href="#pricing" class="block py-3 text-gray-400 hover:text-cyan-400 transition">Тарифы</a>
+        <a href="#faq" class="block py-3 text-gray-400 hover:text-cyan-400 transition">FAQ</a>
+        <div class="border-t border-cyan-500/20 pt-3 mt-2">
+          <!-- Кнопка ДОБАВИТЬ БОТА в мобильном меню -->
+          <a href="https://discord.com/api/oauth2/authorize?client_id=1107807820604248126&permissions=8&scope=bot%20applications.commands" 
+             class="btn-neon block py-3 rounded-lg font-semibold text-center text-sm cursor-pointer">
+            <i class="fab fa-discord mr-2"></i> Добавить на сервер
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ===== HERO ===== -->
+  <section class="min-h-screen flex items-center justify-center relative px-4 overflow-hidden">
+    <div class="neon-grid-bg"></div>
+    <div class="neon-orb" style="width:500px;height:500px;background:radial-gradient(circle,rgba(6,182,212,0.2),transparent 70%);top:10%;left:15%;animation-delay:0s;"></div>
+    <div class="neon-orb" style="width:400px;height:400px;background:radial-gradient(circle,rgba(168,85,247,0.2),transparent 70%);top:50%;right:10%;animation-delay:3s;"></div>
+    
+    <div class="max-w-5xl mx-auto text-center relative z-10">
+      <div class="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-cyan-500/30 bg-cyan-500/5 mb-8 fade-in backdrop-blur-sm">
+        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+        <span class="text-xs text-cyan-300 font-medium tracking-wide uppercase font-mono">v3.0 — Новое обновление</span>
+      </div>
+      
+      <h1 class="text-6xl md:text-8xl lg:text-9xl font-black mb-6 tracking-tighter leading-[0.9] fade-in delay-100 font-mono">
+        <span class="gradient-text">SYNTH</span>
+      </h1>
+      
+      <p class="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed fade-in delay-200">
+        Многофункциональный <span class="text-cyan-400">Discord-бот</span> нового поколения.<br>
+        Эмбеды, тикеты, модерация и аналитика — <span class="text-purple-400">всё в одном</span>.
+      </p>
+      
+      <!-- Centered CTA Button: ДОБАВИТЬ БОТА -->
+      <div class="flex justify-center mb-12 fade-in delay-300">
+        <a href="https://discord.com/api/oauth2/authorize?client_id=1107807820604248126&permissions=8&scope=bot%20applications.commands" 
+           target="_blank"
+           class="btn-neon px-12 py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 cursor-pointer shadow-[0_0_20px_rgba(6,182,212,0.3)]">
+          <i class="fab fa-discord text-xl"></i>
+          Добавить на сервер
+        </a>
+      </div>
+    </div>
+    
+    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
+      <div class="w-6 h-10 rounded-full border-2 border-cyan-500/50 flex justify-center pt-2">
+        <div class="w-1 h-3 rounded-full bg-cyan-400 animate-[ping_1.5s_ease-in-out_infinite]"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FEATURES ===== -->
+  <section id="features" class="py-24 px-4 relative">
+    <div class="neon-divider mb-16"></div>
+    
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-16 fade-in">
+        <p class="text-xs font-semibold text-cyan-400 uppercase tracking-[0.2em] mb-3 font-mono">Возможности</p>
+        <h2 class="text-3xl md:text-5xl font-black tracking-tight mb-4 text-white">Инструменты для <span class="gradient-text">роста сервера</span></h2>
+        <p class="text-gray-400 mt-4 max-w-xl mx-auto">Каждая функция создана, чтобы упростить управление и повысить вовлечённость участников.</p>
+      </div>
+      
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="neon-box rounded-2xl p-6 fade-in">
+          <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500/20 to-cyan-500/5 flex items-center justify-center mb-5 border border-cyan-500/30">
+            <i class="fas fa-palette text-2xl text-cyan-400"></i>
+          </div>
+          <h3 class="text-lg font-bold mb-2 text-white">Embed Builder</h3>
+          <p class="text-gray-400 text-sm leading-relaxed">Визуальный конструктор эмбедов. Поддержка GIF, кастомных цветов, полей и интерактивных кнопок без единой строки кода.</p>
+        </div>
+        
+        <div class="neon-box neon-box-purple rounded-2xl p-6 fade-in delay-100">
+          <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-500/5 flex items-center justify-center mb-5 border border-purple-500/30">
+            <i class="fas fa-ticket-alt text-2xl text-purple-400"></i>
+          </div>
+          <h3 class="text-lg font-bold mb-2 text-white">Тикет-система</h3>
+          <p class="text-gray-400 text-sm leading-relaxed">Гибкие категории, приватные каналы, транскрипты и красивые панели с GIF. Идеально для поддержки, жалоб и наборов.</p>
+        </div>
+        
+        <div class="neon-box rounded-2xl p-6 fade-in delay-200">
+          <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500/20 to-cyan-500/5 flex items-center justify-center mb-5 border border-cyan-500/30">
+            <i class="fas fa-broom text-2xl text-cyan-400"></i>
+          </div>
+          <h3 class="text-lg font-bold mb-2 text-white">/clear & Модерация</h3>
+          <p class="text-gray-400 text-sm leading-relaxed">Мгновенная очистка чата, фильтры ссылок, анти-рейд и умные логи действий. Держите порядок на сервере автоматически.</p>
+        </div>
+        
+        <div class="neon-box neon-box-purple rounded-2xl p-6 fade-in">
+          <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-500/5 flex items-center justify-center mb-5 border border-purple-500/30">
+            <i class="fas fa-user-tag text-2xl text-purple-400"></i>
+          </div>
+          <h3 class="text-lg font-bold mb-2 text-white">AutoGiveRole</h3>
+          <p class="text-gray-400 text-sm leading-relaxed">Автоматическая выдача ролей при входе, достижении уровня или выполнении условий. Гибкая настройка триггеров.</p>
+        </div>
+        
+        <div class="neon-box rounded-2xl p-6 fade-in delay-100">
+          <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500/20 to-cyan-500/5 flex items-center justify-center mb-5 border border-cyan-500/30">
+            <i class="fas fa-chart-pie text-2xl text-cyan-400"></i>
+          </div>
+          <h3 class="text-lg font-bold mb-2 text-white">InviteLogger</h3>
+          <p class="text-gray-400 text-sm leading-relaxed">Точный трекинг приглашений: кто привёл, по какой ссылке, сколько осталось. Защита от фейковых инвайтов и накруток.</p>
+        </div>
+        
+        <div class="neon-box neon-box-purple rounded-2xl p-6 fade-in delay-200">
+          <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-500/5 flex items-center justify-center mb-5 border border-purple-500/30">
+            <i class="fas fa-shield-alt text-2xl text-purple-400"></i>
+          </div>
+          <h3 class="text-lg font-bold mb-2 text-white">ChatterMetrics</h3>
+          <p class="text-gray-400 text-sm leading-relaxed">Продвинутый анти-спам и анализ активности. Выявляет подозрительные паттерны, мутит нарушителей и защищает чат от флуда.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== INTERFACE PREVIEW ===== -->
+  <section id="interface" class="py-24 px-4 relative">
+    <div class="neon-divider mb-16"></div>
+    
+    <div class="max-w-6xl mx-auto">
+      <div class="text-center mb-16 fade-in">
+        <p class="text-xs font-semibold text-purple-400 uppercase tracking-[0.2em] mb-3 font-mono">Визуальный конструктор</p>
+        <h2 class="text-3xl md:text-5xl font-black tracking-tight text-white">Создавайте <span class="gradient-text">без кода</span></h2>
+        <p class="text-gray-400 mt-4 max-w-2xl mx-auto">Два примера того, как выглядят эмбеды и панели, созданные через Synth. GIF, кнопки и стиль — всё настраивается в пару кликов.</p>
+      </div>
+      
+      <div class="interface-grid fade-in delay-200">
+        <!-- Example A: Embed Builder with GIF & Buttons -->
+        <div class="text-left">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="w-8 h-8 rounded bg-cyan-500/20 flex items-center justify-center text-cyan-400"><i class="fas fa-image"></i></span>
+            <h3 class="font-bold text-lg text-white">Эмбед с GIF и кнопками</h3>
+          </div>
+          
+          <div class="discord-embed rounded-lg overflow-hidden">
+            <div class="p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <div class="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center">
+                  <span class="text-black text-[8px] font-black">S</span>
+                </div>
+                <span class="text-sm font-bold text-cyan-400">Synth</span>
+                <span class="text-[10px] bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded border border-cyan-500/30">BOT</span>
+                <span class="text-[11px] text-gray-500 ml-1">сегодня в 14:20</span>
+              </div>
+              <div class="pl-[30px]">
+                <div class="text-sm text-white font-semibold mb-2">🎉 Обновление v3.0 уже здесь!</div>
+                <div class="text-sm text-gray-300 mb-3 leading-relaxed">
+                  Мы добавили поддержку анимированных GIF в конструкторе, новые неоновые темы и улучшенную производительность.
+                </div>
+                
+                <!-- GIF Placeholder -->
+                <div class="w-full h-32 rounded-lg overflow-hidden mb-3 bg-[#111128] flex items-center justify-center border border-white/10 relative">
+                  <img src="https://media.tenor.com/K2q9mJdX9qEAAAAC/neon-cyberpunk.gif" alt="Neon GIF" class="w-full h-full object-cover opacity-80" onerror="this.style.display='none'">
+                  <span class="absolute text-xs text-gray-500 font-mono z-10 bg-black/50 px-2 py-1 rounded">GIF Preview</span>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-wrap gap-2 mt-3">
+                  <button class="dc-btn"><i class="fas fa-download"></i> Скачать</button>
+                  <button class="dc-btn secondary"><i class="fas fa-link"></i> Ссылка</button>
+                  <button class="dc-btn success"><i class="fas fa-star"></i> Оценить</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="text-xs text-gray-500 mt-3 text-center">✨ Пример анонса с анимированным баннером и интерактивными кнопками</p>
+        </div>
+
+        <!-- Example B: Clan Recruitment / Ticket Panel -->
+        <div class="text-left">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="w-8 h-8 rounded bg-purple-500/20 flex items-center justify-center text-purple-400"><i class="fas fa-users"></i></span>
+            <h3 class="font-bold text-lg text-white">Панель набора в клан</h3>
+          </div>
+          
+          <div class="discord-embed rounded-lg overflow-hidden" style="border-left-color: #a855f7;">
+            <div class="p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <div class="w-6 h-6 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center">
+                  <span class="text-black text-[8px] font-black">S</span>
+                </div>
+                <span class="text-sm font-bold text-purple-400">Synth</span>
+                <span class="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded border border-purple-500/30">BOT</span>
+                <span class="text-[11px] text-gray-500 ml-1">сегодня в 16:45</span>
+              </div>
+              <div class="pl-[30px]">
+                <div class="text-sm text-white font-semibold mb-2">⚔️ Набор в клан "NEON STRIKERS"</div>
+                <div class="text-sm text-gray-300 mb-3 leading-relaxed">
+                  Ищем активных игроков для турниров и рейтинговых матчей. <br>
+                  <span class="text-cyan-400">Требования:</span> 18+, опыт в CS2/Valorant, наличие микрофона.
+                </div>
+                
+                <!-- Clan Banner GIF -->
+                <div class="w-full h-28 rounded-lg overflow-hidden mb-3 bg-[#111128] flex items-center justify-center border border-purple-500/30 relative">
+                  <img src="https://media.tenor.com/4sVJq6v9k8gAAAAC/cyberpunk-city-night.gif" alt="Clan Banner" class="w-full h-full object-cover opacity-70" onerror="this.style.display='none'">
+                  <span class="absolute text-xs text-gray-400 font-mono z-10 bg-black/50 px-2 py-1 rounded">Баннер клана</span>
+                </div>
+
+                <!-- Ticket/Apply Buttons -->
+                <div class="flex flex-wrap gap-2 mt-3">
+                  <button class="dc-btn" style="background: #a855f7;"><i class="fas fa-file-alt"></i> Подать заявку</button>
+                  <button class="dc-btn secondary"><i class="fas fa-info-circle"></i> Правила</button>
+                  <button class="dc-btn danger"><i class="fas fa-sign-out-alt"></i> Закрыть</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="text-xs text-gray-500 mt-3 text-center">🎫 Пример тикет-панели для набора людей с требованиями и кнопками действий</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+    <!-- ===== PRICING ===== -->
+  <section id="pricing" class="py-24 px-4 relative">
+    <div class="neon-divider mb-16"></div>
+    
+    <div class="max-w-5xl mx-auto">
+      <div class="text-center mb-16 fade-in">
+        <p class="text-xs font-semibold text-purple-400 uppercase tracking-[0.2em] mb-3 font-mono">Тарифы</p>
+        <h2 class="text-3xl md:text-5xl font-black tracking-tight text-white">Выберите свой <span class="gradient-text">план</span></h2>
+        <p class="text-gray-400 mt-4">Начните бесплатно или получите максимум возможностей</p>
+      </div>
+      
+      <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <!-- Free Plan -->
+        <div class="pricing-card fade-in">
+          <h3>Free</h3>
+          <p class="text-gray-400 text-sm">Для небольших серверов</p>
+          <div class="price text-cyan-400">$0<span>/месяц</span></div>
+          <ul class="features">
+            <li><i class="fas fa-check"></i><span>Embed Builder (white/blue, без GIF)</span></li>
+            <li><i class="fas fa-check"></i><span>Tickets (без GIF)</span></li>
+            <li><i class="fas fa-check"></i><span>/clear — очистка сообщений</span></li>
+            <li><i class="fas fa-check"></i><span>AutoGiveRole</span></li>
+            <li><i class="fas fa-check"></i><span>1 сервер</span></li>
+          </ul>
+          <button class="btn-neon-outline w-full py-3 rounded-lg font-semibold cursor-pointer">Начать бесплатно</button>
+        </div>
+
+        <!-- Premium Plan -->
+        <div class="pricing-card premium fade-in delay-100">
+          <span class="badge">ПОПУЛЯРНЫЙ</span>
+          <h3>Premium</h3>
+          <p class="text-gray-400 text-sm">Для растущих сообществ</p>
+          <div class="price text-purple-400">$2.99<span>/месяц</span></div>
+          <ul class="features">
+            <li><i class="fas fa-check"></i><span>Полный доступ к Embed Builder</span></li>
+            <li><i class="fas fa-check"></i><span>Полный доступ к Tickets</span></li>
+            <li><i class="fas fa-check"></i><span>/clear — очистка сообщений</span></li>
+            <li><i class="fas fa-check"></i><span>AutoGiveRole</span></li>
+            <li><i class="fas fa-check"></i><span>Безлимитное количество серверов</span></li>
+            <li><i class="fas fa-check"></i><span>Подарить подписку (24 часа)</span></li>
+            <li><i class="fas fa-check"></i><span>ChatterMetrics (анти-спам)</span></li>
+            <li><i class="fas fa-check"></i><span>InviteLogger (трекер приглашений)</span></li>
+            <li><i class="fas fa-check"></i><span>Приоритетная поддержка</span></li>
+          </ul>
+          <button class="btn-neon w-full py-3 rounded-lg font-semibold cursor-pointer" style="background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink));">Оформить Premium</button>
+        </div>
+      </div>
+
+      <p class="text-center text-gray-500 text-sm mt-10 fade-in">
+        Все тарифы включают 7-дневный пробный период Premium. Отмена в любое время.
+      </p>
+    </div>
+  </section>
+
+  <!-- ===== FAQ ===== -->
+  <section id="faq" class="py-24 px-4 relative">
+    <div class="neon-divider mb-16"></div>
+    
+    <div class="max-w-3xl mx-auto">
+      <div class="text-center mb-16 fade-in">
+        <p class="text-xs font-semibold text-cyan-400 uppercase tracking-[0.2em] mb-3 font-mono">FAQ</p>
+        <h2 class="text-3xl md:text-4xl font-black tracking-tight text-white">Частые <span class="gradient-text">вопросы</span></h2>
+      </div>
+      
+      <div class="space-y-3 fade-in delay-100">
+        <div class="faq-item neon-box rounded-xl overflow-hidden cursor-pointer" onclick="toggleFaq(this)">
+          <button class="faq-btn w-full flex items-center justify-between p-5 text-left">
+            <span class="font-semibold text-sm pr-4 text-white">Как добавить Synth на свой сервер?</span>
+            <i class="fas fa-chevron-down text-gray-500 transition-transform duration-300 flex-shrink-0"></i>
+          </button>
+          <div class="faq-content hidden px-5 pb-5">
+            <p class="text-gray-400 text-sm leading-relaxed">Нажмите кнопку «Добавить на сервер» на нашем сайте, авторизуйтесь через Discord, выберите сервер и подтвердите права. Бот начнёт работать мгновенно.</p>
+          </div>
+        </div>
+        
+        <div class="faq-item neon-box neon-box-purple rounded-xl overflow-hidden cursor-pointer" onclick="toggleFaq(this)">
+          <button class="faq-btn w-full flex items-center justify-between p-5 text-left">
+            <span class="font-semibold text-sm pr-4 text-white">Synth бесплатный?</span>
+            <i class="fas fa-chevron-down text-gray-500 transition-transform duration-300 flex-shrink-0"></i>
+          </button>
+          <div class="faq-content hidden px-5 pb-5">
+            <p class="text-gray-400 text-sm leading-relaxed">Да, все основные функции бесплатны. Премиум-тариф ($2.99/мес) открывает дополнительные возможности: полный доступ к Embed Builder, безлимитные сервера, ChatterMetrics, InviteLogger и приоритетную поддержку.</p>
+          </div>
+        </div>
+        
+        <div class="faq-item neon-box rounded-xl overflow-hidden cursor-pointer" onclick="toggleFaq(this)">
+          <button class="faq-btn w-full flex items-center justify-between p-5 text-left">
+            <span class="font-semibold text-sm pr-4 text-white">Какие права нужны боту?</span>
+            <i class="fas fa-chevron-down text-gray-500 transition-transform duration-300 flex-shrink-0"></i>
+          </button>
+          <div class="faq-content hidden px-5 pb-5">
+            <p class="text-gray-400 text-sm leading-relaxed">Для работы боту нужны базовые права: отправка сообщений, чтение истории сообщений, управление ролями, подключение к голосовым каналам. Полный список прав отображается при добавлении.</p>
+          </div>
+        </div>
+        
+        <div class="faq-item neon-box neon-box-purple rounded-xl overflow-hidden cursor-pointer" onclick="toggleFaq(this)">
+          <button class="faq-btn w-full flex items-center justify-between p-5 text-left">
+            <span class="font-semibold text-sm pr-4 text-white">Как связаться с поддержкой?</span>
+            <i class="fas fa-chevron-down text-gray-500 transition-transform duration-300 flex-shrink-0"></i>
+          </button>
+          <div class="faq-content hidden px-5 pb-5">
+            <p class="text-gray-400 text-sm leading-relaxed">Присоединяйтесь к нашему Discord-серверу поддержки. Там есть разделы для баг-репортов, запросов функций и общий чат. Среднее время ответа — 30 минут.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CTA ===== -->
+  <section class="py-24 px-4 relative">
+    <div class="neon-divider mb-16"></div>
+    
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-br from-cyan-500/10 via-purple-500/10 to-pink-500/10 rounded-full blur-[100px] pointer-events-none"></div>
+    
+    <div class="max-w-4xl mx-auto text-center relative z-10 fade-in">
+      <h2 class="text-5xl md:text-7xl font-black tracking-tight mb-6 font-mono">
+        <span class="gradient-text">ГОТОВ?</span>
+      </h2>
+      <p class="text-gray-400 text-lg mb-10 max-w-xl mx-auto">
+        Присоединяйся к тысячам серверов, которые уже используют Synth. Настройка занимает <span class="text-cyan-400">30 секунд</span>.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <!-- Кнопка ДОБАВИТЬ БОТА -->
+        <a href="https://discord.com/api/oauth2/authorize?client_id=1107807820604248126&permissions=8&scope=bot%20applications.commands" 
+           target="_blank"
+           class="btn-neon px-10 py-4 rounded-xl font-bold text-base flex items-center justify-center gap-3 cursor-pointer text-base">
+          <i class="fab fa-discord text-lg"></i>
+          Добавить Synth
+        </a>
+        <!-- Кнопка поддержки -->
+        <a href="https://discord.gg/UVp7gW23nw" class="btn-neon-purple px-10 py-4 rounded-xl font-bold text-base flex items-center justify-center gap-2 cursor-pointer text-base" style="background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink));">
+          <i class="fab fa-discord text-sm"></i>
+          Сервер поддержки
+        </a>
+      </div>
+      <p class="text-gray-600 text-xs mt-6 font-mono">
+        Бесплатно навсегда • Без скрытых платежей • Kinetic Corp.
+      </p>
+    </div>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="py-12 px-4 border-t border-cyan-500/20 bg-[#050510]">
+    <div class="max-w-7xl mx-auto">
+      <div class="grid md:grid-cols-4 gap-8 mb-10">
+        <div class="md:col-span-2">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="relative w-9 h-9 rounded-lg overflow-hidden">
+              <div class="absolute inset-0 bg-gradient-to-br from-cyan-400 via-purple-500 to-pink-500 animate-[gradient-shift_3s_ease_infinite]"></div>
+              <span class="relative z-10 w-full h-full flex items-center justify-center text-black font-black text-sm">S</span>
+            </div>
+            <span class="font-mono font-bold text-xl tracking-wider text-white">SYNTH</span>
+          </div>
+          <p class="text-gray-500 text-sm max-w-sm mb-4">
+            Мощный, быстрый и стильный Discord-бот. Создан сообществом, для сообщества.
+          </p>
+          <div class="flex gap-3">
+            <a href="#" class="w-10 h-10 rounded-lg border border-cyan-500/30 hover:border-cyan-400 hover:bg-cyan-500/10 flex items-center justify-center transition text-cyan-400" aria-label="Discord"><i class="fab fa-discord"></i></a>
+            <a href="#" class="w-10 h-10 rounded-lg border border-purple-500/30 hover:border-purple-400 hover:bg-purple-500/10 flex items-center justify-center transition text-purple-400" aria-label="GitHub"><i class="fab fa-github"></i></a>
+            <a href="#" class="w-10 h-10 rounded-lg border border-pink-500/30 hover:border-pink-400 hover:bg-pink-500/10 flex items-center justify-center transition text-pink-400" aria-label="Twitter"><i class="fab fa-x-twitter"></i></a>
+          </div>
+        </div>
+        <div>
+          <h4 class="font-semibold text-sm mb-4 uppercase tracking-wider text-cyan-400 font-mono">Ссылки</h4>
+          <ul class="space-y-2 text-sm text-gray-500">
+            <li><a href="#features" class="hover:text-cyan-400 transition">Возможности</a></li>
+            <li><a href="#interface" class="hover:text-cyan-400 transition">Интерфейс</a></li>
+            <li><a href="#pricing" class="hover:text-cyan-400 transition">Тарифы</a></li>
+            <li><a href="#" class="hover:text-cyan-400 transition">Статус</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-semibold text-sm mb-4 uppercase tracking-wider text-purple-400 font-mono">Правовая информация</h4>
+          <ul class="space-y-2 text-sm text-gray-500">
+            <li><a href="#" class="hover:text-purple-400 transition">Условия использования</a></li>
+            <li><a href="#" class="hover:text-purple-400 transition">Конфиденциальность</a></li>
+            <li><a href="#" class="hover:text-purple-400 transition">Cookie Policy</a></li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="pt-6 border-t border-cyan-500/20 flex flex-col md:flex-row justify-between items-center gap-4">
+        <p class="text-gray-600 text-xs font-mono">© 2024 Synth. Не является продуктом Discord Inc.</p>
+        <p class="text-gray-700 text-[10px] font-mono">Сделано с <span class="text-pink-400">♥</span> для Discord-комьюнити</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ===== JAVASCRIPT ===== -->
+  <script>
+    const mobileBtn = document.getElementById('mobile-btn');
+    const mobileMenu = document.getElementById('mobile-menu');
+    
+    mobileBtn.addEventListener('click', () => {
+      mobileMenu.classList.toggle('hidden');
+      const icon = mobileBtn.querySelector('i');
+      icon.classList.toggle('fa-bars');
+      icon.classList.toggle('fa-xmark');
+    });
+    
+    mobileMenu.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', () => {
+        mobileMenu.classList.add('hidden');
+        const icon = mobileBtn.querySelector('i');
+        icon.classList.add('fa-bars');
+        icon.classList.remove('fa-xmark');
+      });
+    });
+    
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function(e) {
+        const targetId = this.getAttribute('href');
+        if (targetId === '#') return;
+        const target = document.querySelector(targetId);
+        if (target) {
+          e.preventDefault();
+          const navHeight = document.querySelector('nav').offsetHeight;
+          const top = target.getBoundingClientRect().top + window.scrollY - navHeight - 20;
+          window.scrollTo({ top, behavior: 'smooth' });
+        }
+      });
+    });
+    
+    function toggleFaq(item) {
+      const content = item.querySelector('.faq-content');
+      const icon = item.querySelector('.faq-btn i');
+      const isActive = item.classList.contains('faq-active');
+      
+      document.querySelectorAll('.faq-item').forEach(i => {
+        i.classList.remove('faq-active');
+        i.querySelector('.faq-content').classList.add('hidden');
+        i.querySelector('.faq-btn i').style.transform = 'rotate(0deg)';
+        i.querySelector('.faq-btn i').style.color = '#6b7280';
+      });
+      
+      if (!isActive) {
+        item.classList.add('faq-active');
+        content.classList.remove('hidden');
+        icon.style.transform = 'rotate(180deg)';
+        icon.style.color = '#06b6d4';
+      }
+    }
+    
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.08 });
+    
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+    
+    function createParticles() {
+      const container = document.getElementById('particles');
+      const colors = ['#06b6d4', '#3b82f6', '#a855f7', '#ec4899'];
+      const particleCount = 40;
+      
+      for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        particle.style.left = Math.random() * 100 + '%';
+        particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        particle.style.animationDuration = (Math.random() * 15 + 10) + 's';
+        particle.style.animationDelay = (Math.random() * 10) + 's';
+        particle.style.width = (Math.random() * 3 + 1) + 'px';
+        particle.style.height = particle.style.width;
+        particle.style.boxShadow = `0 0 ${Math.random() * 10 + 5}px ${particle.style.backgroundColor}`;
+        container.appendChild(particle);
+      }
+    }
+    createParticles();
+    
+    window.addEventListener('scroll', () => {
+      const nav = document.querySelector('nav');
+      if (window.scrollY > 50) {
+        nav.style.borderBottomColor = 'rgba(6,182,212,0.4)';
+        nav.style.boxShadow = '0 0 30px rgba(6,182,212,0.1)';
+      } else {
+        nav.style.borderBottomColor = 'rgba(6,182,212,0.2)';
+        nav.style.boxShadow = 'none';
+      }
+    });
+    
+    console.log('%cSYNTH', 'font-size:24px;font-weight:bold;color:#06b6d4;background:#050510;padding:4px 12px;border-radius:4px;');
+    console.log('%c🤖 Discord Bot Landing Page', 'color:#a855f7');
+  </script>
+</body>
+</html>

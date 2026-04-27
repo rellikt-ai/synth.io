@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Synth — Выберите сервер</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"/>
+  <style>
+    :root {
+      --bg: #050510; --card: rgba(10,10,30,0.7); --border: rgba(6,182,212,0.2);
+      --text: #fff; --text-dim: #9ca3af; --cyan: #06b6d4; --purple: #a855f7;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    .header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; border-bottom: 1px solid var(--border); background: rgba(10,10,30,0.9); position: sticky; top: 0; }
+    .logo { display: flex; align-items: center; gap: 10px; font-family: 'Orbitron', monospace; font-weight: 800; font-size: 18px; }
+    .logo-icon { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, var(--cyan), var(--purple)); display: flex; align-items: center; justify-content: center; font-weight: 900; color: #000; }
+    .user-badge { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 8px; font-size: 13px; }
+    .user-avatar { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, var(--purple), #ec4899); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+    .logout-btn { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); background: rgba(15,15,35,0.8); color: var(--text-dim); cursor: pointer; transition: all 0.2s; }
+    .logout-btn:hover { border-color: var(--purple); color: var(--purple); }
+    .main { max-width: 720px; margin: 0 auto; padding: 48px 24px; }
+    .page-title { font-family: 'Orbitron', monospace; font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+    .gradient-text { background: linear-gradient(135deg, var(--cyan), var(--purple), #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .search-box { position: relative; margin-bottom: 24px; }
+    .search-box input { width: 100%; padding: 12px 16px 12px 44px; border-radius: 10px; border: 1px solid var(--border); background: rgba(15,15,35,0.8); color: var(--text); font-size: 14px; outline: none; }
+    .search-box input:focus { border-color: var(--cyan); }
+    .search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-dim); pointer-events: none; }
+    .server-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; cursor: pointer; transition: all 0.3s; }
+    .server-card:hover { border-color: rgba(6,182,212,0.5); transform: translateY(-2px); }
+    .server-left { display: flex; align-items: center; gap: 16px; }
+    .server-icon { width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(135deg, rgba(10,10,30,0.9), rgba(20,20,50,0.9)); display: flex; align-items: center; justify-content: center; font-size: 24px; border: 2px solid var(--border); }
+    .server-name { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+    .server-meta { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-dim); font-family: 'Orbitron', monospace; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 8px rgba(6,182,212,0.6); animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.7;transform:scale(0.9)} }
+    .server-arrow { width: 20px; height: 20px; border-radius: 50%; background: rgba(6,182,212,0.1); display: flex; align-items: center; justify-content: center; color: var(--cyan); font-size: 10px; }
+    .server-card:hover .server-arrow { background: var(--cyan); color: #000; }
+    .empty-state { text-align: center; padding: 50px 20px; color: var(--text-dim); }
+    .add-bot-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 22px; border-radius: 10px; background: linear-gradient(135deg, var(--cyan), var(--purple)); color: #fff; font-weight: 600; cursor: pointer; border: none; margin-top: 16px; }
+    .toast { position: fixed; bottom: 24px; right: 24px; background: var(--card); border: 1px solid var(--cyan); border-radius: 12px; padding: 14px 20px; display: flex; align-items: center; gap: 12px; z-index: 1000; animation: slideIn 0.3s ease; }
+    .toast.hidden { display: none; }
+    @keyframes slideIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <a href="/" class="logo">
+      <div class="logo-icon">S</div>
+      SYNTH
+    </a>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="user-badge">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <span id="username-display">Загрузка...</span>
+      </div>
+      <button class="logout-btn" onclick="logout()">Выйти</button>
+    </div>
+  </header>
+
+  <main class="main">
+    <h1 class="page-title"><span class="gradient-text">Выберите сервер</span></h1>
+    <p style="color:var(--text-dim);margin-bottom:32px;">Серверы, где установлен Synth</p>
+    
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Поиск сервера..." id="searchInput">
+    </div>
+    
+    <div id="serverList"></div>
+  </main>
+
+  <div id="toast" class="toast hidden">
+    <span id="toast-msg">Готово!</span>
+  </div>
+
+  <script>
+    // ===== AUTH CHECK =====
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.authenticated) {
+          window.location.href = '/';
+          return;
+        }
+        document.getElementById('username-display').textContent = data.user.globalName || data.user.username;
+        if (data.user.avatar) {
+          document.getElementById('user-avatar').style.backgroundImage = `url(https://cdn.discordapp.com/avatars/${data.user.id}/${data.user.avatar}.png)`;
+          document.getElementById('user-avatar').style.backgroundSize = 'cover';
+          document.getElementById('user-avatar').textContent = '';
+        }
+        loadServers();
+      })
+      .catch(() => { window.location.href = '/'; });
+
+    // ===== LOAD SERVERS =====
+    async function loadServers() {
+      try {
+        const res = await fetch('/api/user/servers', { credentials: 'include' });
+        const servers = await res.json();
+        renderServers(servers);
+      } catch (err) {
+        console.error(err);
+        document.getElementById('serverList').innerHTML = '<div class="empty-state">Ошибка загрузки серверов</div>';
+      }
+    }
+
+    function renderServers(servers) {
+      const list = document.getElementById('serverList');
+      const query = document.getElementById('searchInput').value.toLowerCase();
+      const filtered = servers.filter(s => s.name.toLowerCase().includes(query));
+
+      if (filtered.length === 0) {
+        list.innerHTML = `
+          <div class="empty-state">
+            <div style="font-size:42px;margin-bottom:16px;opacity:0.3">🔍</div>
+            <h3 style="color:var(--text-dim);margin-bottom:8px">Серверы не найдены</h3>
+            <a href="/api/auth/discord" class="add-bot-btn">
+              <i class="fas fa-plus"></i> Добавить бота на новый сервер
+            </a>
+          </div>`;
+        return;
+      }
+
+      list.innerHTML = filtered.map(s => `
+        <div class="server-card" onclick="selectServer('${s.id}', '${s.name.replace(/'/g, "\\'")}')">
+          <div class="server-left">
+            <div class="server-icon">${s.icon ? `<img src="${s.icon}" style="width:100%;height:100%;border-radius:12px;object-fit:cover">` : '🔷'}</div>
+            <div>
+              <div class="server-name">${s.name}</div>
+              <div class="server-meta">
+                <span class="status-dot"></span>
+                <span>Бот активен</span>
+                <span>●</span>
+                <span>${s.onlineCount || '?'} онлайн</span>
+              </div>
+            </div>
+          </div>
+          <div class="server-arrow"><i class="fas fa-chevron-right"></i></div>
+        </div>`).join('');
+    }
+
+    // ===== SELECT SERVER =====
+    function selectServer(id, name) {
+      showToast(`Открываю: ${name}`);
+      setTimeout(() => {
+        // В реальном проекте: переход на config.html
+        // window.location.href = `/config.html?server=${id}`;
+        alert(`🎛️ Панель настройки для "${name}"\n\nЗдесь будут:\n• Embed Builder\n• Тикеты\n• Модерация`);
+      }, 500);
+    }
+
+    // ===== LOGOUT =====
+    function logout() {
+      fetch('/api/auth/logout', { credentials: 'include' })
+        .then(() => { window.location.href = '/'; });
+    }
+
+    // ===== TOAST =====
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      document.getElementById('toast-msg').textContent = msg;
+      t.classList.remove('hidden');
+      setTimeout(() => t.classList.add('hidden'), 3000);
+    }
+
+    // ===== SEARCH =====
+    document.getElementById('searchInput').addEventListener('input', loadServers);
+  </script>
+</body>
+</html>
