@@ -652,20 +652,21 @@
       });
     });
     
-    // ✅ Обработчик только для якорных ссылок (#features, #interface и т.д.)
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-      anchor.addEventListener('click', function(e) {
-        const targetId = this.getAttribute('href');
-        if (targetId === '#') return;
-        const target = document.querySelector(targetId);
-        if (target) {
-          e.preventDefault();
-          const navHeight = document.querySelector('nav').offsetHeight;
-          const top = target.getBoundingClientRect().top + window.scrollY - navHeight - 20;
-          window.scrollTo({ top, behavior: 'smooth' });
-        }
-      });
-    });
+   // ✅ ТОЛЬКО для якорных ссылок (#features, #interface и т.д.)
+// Все остальные ссылки (включая /api/) работают как обычно
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+  anchor.addEventListener('click', function(e) {
+    const targetId = this.getAttribute('href');
+    if (targetId === '#' || !targetId) return;
+    const target = document.querySelector(targetId);
+    if (target) {
+      e.preventDefault();
+      const navHeight = document.querySelector('nav')?.offsetHeight || 64;
+      const top = target.getBoundingClientRect().top + window.scrollY - navHeight - 20;
+      window.scrollTo({ top, behavior: 'smooth' });
+    }
+  });
+});
     
     function toggleFaq(item) {
       const content = item.querySelector('.faq-content');
