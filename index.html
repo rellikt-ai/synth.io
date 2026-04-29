@@ -188,12 +188,18 @@
         </div>
         
         <div class="hidden md:flex items-center gap-3">
-          <!-- Кнопка ВОЙТИ (ведет в панель управления) -->
-          <a href="/api/auth/discord" class="text-sm text-gray-400 nav-link">Войти</a>
+          <!-- 🔐 Кнопка ВОЙТИ (авторизация пользователя) - АБСОЛЮТНЫЙ ПУТЬ -->
+          <a href="https://synth-io.vercel.app/api/auth/discord" 
+             class="text-sm text-gray-400 nav-link"
+             onclick="console.log('🔐 Login button clicked'); return true;">
+            Войти
+          </a>
           
-          <!-- Кнопка ДОБАВИТЬ БОТА (открывает меню установки) -->
+          <!-- 🤖 Кнопка ДОБАВИТЬ БОТА (установка бота на сервер) -->
           <a href="https://discord.com/api/oauth2/authorize?client_id=1107807820604248126&permissions=8&scope=bot%20applications.commands" 
-             class="btn-neon px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 cursor-pointer">
+             class="btn-neon px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 cursor-pointer"
+             target="_blank"
+             onclick="console.log('🤖 Add bot button clicked'); return true;">
             <i class="fab fa-discord"></i> Добавить
           </a>
         </div>
@@ -210,10 +216,18 @@
         <a href="#interface" class="block py-3 text-gray-400 hover:text-cyan-400 transition">Интерфейс</a>
         <a href="#pricing" class="block py-3 text-gray-400 hover:text-cyan-400 transition">Тарифы</a>
         <a href="#faq" class="block py-3 text-gray-400 hover:text-cyan-400 transition">FAQ</a>
-        <div class="border-t border-cyan-500/20 pt-3 mt-2">
-          <!-- Кнопка ДОБАВИТЬ БОТА в мобильном меню -->
+        <div class="border-t border-cyan-500/20 pt-3 mt-2 space-y-2">
+          <!-- 🔐 Кнопка ВОЙТИ в мобильном меню -->
+          <a href="https://synth-io.vercel.app/api/auth/discord" 
+             class="btn-neon-outline block py-3 rounded-lg font-semibold text-center text-sm cursor-pointer"
+             onclick="console.log('🔐 Mobile login clicked'); return true;">
+            <i class="fas fa-sign-in-alt mr-2"></i> Войти
+          </a>
+          <!-- 🤖 Кнопка ДОБАВИТЬ БОТА в мобильном меню -->
           <a href="https://discord.com/api/oauth2/authorize?client_id=1107807820604248126&permissions=8&scope=bot%20applications.commands" 
-             class="btn-neon block py-3 rounded-lg font-semibold text-center text-sm cursor-pointer">
+             class="btn-neon block py-3 rounded-lg font-semibold text-center text-sm cursor-pointer"
+             target="_blank"
+             onclick="console.log('🤖 Mobile add bot clicked'); return true;">
             <i class="fab fa-discord mr-2"></i> Добавить на сервер
           </a>
         </div>
@@ -242,11 +256,12 @@
         Эмбеды, тикеты, модерация и аналитика — <span class="text-purple-400">всё в одном</span>.
       </p>
       
-      <!-- Centered CTA Button: ДОБАВИТЬ БОТА -->
+      <!-- 🤖 Главная кнопка: ДОБАВИТЬ БОТА (не для входа!) -->
       <div class="flex justify-center mb-12 fade-in delay-300">
         <a href="https://discord.com/api/oauth2/authorize?client_id=1107807820604248126&permissions=8&scope=bot%20applications.commands" 
            target="_blank"
-           class="btn-neon px-12 py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 cursor-pointer shadow-[0_0_20px_rgba(6,182,212,0.3)]">
+           class="btn-neon px-12 py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 cursor-pointer shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+           onclick="console.log('🤖 Hero add bot clicked'); return true;">
           <i class="fab fa-discord text-xl"></i>
           Добавить на сервер
         </a>
@@ -421,7 +436,7 @@
     </div>
   </section>
 
-    <!-- ===== PRICING ===== -->
+  <!-- ===== PRICING ===== -->
   <section id="pricing" class="py-24 px-4 relative">
     <div class="neon-divider mb-16"></div>
     
@@ -543,14 +558,15 @@
         Присоединяйся к тысячам серверов, которые уже используют Synth. Настройка занимает <span class="text-cyan-400">30 секунд</span>.
       </p>
       <div class="flex flex-col sm:flex-row gap-4 justify-center">
-        <!-- Кнопка ДОБАВИТЬ БОТА -->
+        <!-- 🤖 Кнопка ДОБАВИТЬ БОТА -->
         <a href="https://discord.com/api/oauth2/authorize?client_id=1107807820604248126&permissions=8&scope=bot%20applications.commands" 
            target="_blank"
-           class="btn-neon px-10 py-4 rounded-xl font-bold text-base flex items-center justify-center gap-3 cursor-pointer text-base">
+           class="btn-neon px-10 py-4 rounded-xl font-bold text-base flex items-center justify-center gap-3 cursor-pointer text-base"
+           onclick="console.log('🤖 CTA add bot clicked'); return true;">
           <i class="fab fa-discord text-lg"></i>
           Добавить Synth
         </a>
-        <!-- Кнопка поддержки -->
+        <!-- 💬 Кнопка поддержки -->
         <a href="https://discord.gg/UVp7gW23nw" class="btn-neon-purple px-10 py-4 rounded-xl font-bold text-base flex items-center justify-center gap-2 cursor-pointer text-base" style="background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink));">
           <i class="fab fa-discord text-sm"></i>
           Сервер поддержки
@@ -621,7 +637,13 @@
       icon.classList.toggle('fa-xmark');
     });
     
+    // ✅ ВАЖНО: Не блокируем клики по ссылкам с /api/ или https://
     mobileMenu.querySelectorAll('a').forEach(link => {
+      const href = link.getAttribute('href');
+      // Пропускаем ссылки на авторизацию и внешние ссылки
+      if (href?.includes('/api/') || href?.startsWith('https://')) {
+        return; // Не добавляем обработчик, пусть работает как обычная ссылка
+      }
       link.addEventListener('click', () => {
         mobileMenu.classList.add('hidden');
         const icon = mobileBtn.querySelector('i');
@@ -630,6 +652,7 @@
       });
     });
     
+    // ✅ Обработчик только для якорных ссылок (#features, #interface и т.д.)
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
       anchor.addEventListener('click', function(e) {
         const targetId = this.getAttribute('href');
