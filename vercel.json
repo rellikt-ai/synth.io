@@ -12,15 +12,19 @@
     },
     {
       "src": "/dashboard.html",
-      "dest": "/frontend/dashboard.html"
+      "dest": "/dashboard.html"
     },
     {
       "src": "/config.html",
-      "dest": "/frontend/config.html"
+      "dest": "/config.html"
+    },
+    {
+      "src": "/",
+      "dest": "/index.html"
     },
     {
       "src": "/(.*)",
-      "dest": "/frontend/index.html"
+      "dest": "/$1"
     }
   ]
 }
