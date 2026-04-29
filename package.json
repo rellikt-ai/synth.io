@@ -1,12 +1,11 @@
 {
   "name": "synth-backend",
   "version": "1.1.0",
-  "description": "Synth Discord Bot Backend (Vercel Serverless + Railway Compatible)",
+  "description": "Synth Discord Bot Backend (Vercel Serverless)",
   "main": "server.js",
   "scripts": {
     "dev": "nodemon server.js",
-    "start": "node server.js",
-    "vercel-build": "echo 'No build step required'"
+    "start": "node server.js"
   },
   "engines": {
     "node": "20.x"
