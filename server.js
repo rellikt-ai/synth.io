@@ -42,32 +42,76 @@ if (missing.length > 0) {
   process.exit(1);
 }
 
-// ===== MIDDLEWARE =====
+// ===== MIDDLEWARE (ОПТИМИЗИРОВАН ДЛЯ VERCEL + FLAT STRUCTURE) =====
+
+/**
+ * CORS: разрешаем запросы с фронтенда (локально + Vercel)
+ */
 app.use(cors({ 
   origin: [
     'http://localhost:3000',
-    'http://localhost:3001', 
-    process.env.FRONTEND_URL
+    'http://localhost:3001',
+    'https://synth-io.vercel.app',                    // основной домен
+    'https://synth-io-rellikt-ais-projects.vercel.app', // превью-домен
+    /\.vercel\.app$/                                    // все *.vercel.app
   ].filter(Boolean),
-  credentials: true 
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.json());
-app.use(express.static('../frontend'));
 
-// ===== SESSION =====
+/**
+ * Парсинг JSON-тел запросов
+ */
+app.use(express.json({ limit: '10mb' }));
+
+/**
+ * Парсинг URL-encoded данных (для форм)
+ */
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+/**
+ * ⚠️ СТАТИКА: НЕ используем express.static на Vercel!
+ * Vercel сам раздаёт файлы через routes в vercel.json.
+ * Для локальной разработки можно раскомментировать:
+ */
+// if (!process.env.VERCEL) {
+//   app.use(express.static('.')); // раздаёт файлы из корня проекта
+// }
+
+/**
+ * Сессии: совместимо с serverless (кратковременные)
+ * В продакшене для надёжности лучше использовать Redis, но для старта подойдёт и MemoryStore
+ */
 app.use(session({
   secret: process.env.SESSION_SECRET || 'fallback_secret_change_in_production_2024',
+  name: 'synth.sid', // имя куки
   resave: false,
   saveUninitialized: false,
-  cookie: { 
-    maxAge: parseInt(process.env.SESSION_COOKIE_MAX_AGE) || 604800000,
-    secure: process.env.NODE_ENV === 'production',
+  cookie: {
+    maxAge: parseInt(process.env.SESSION_COOKIE_MAX_AGE) || 604800000, // 7 дней
+    secure: process.env.NODE_ENV === 'production' && !process.env.VERCEL, // на Vercel secure может ломать куки
     httpOnly: true,
-    sameSite: 'lax'
+    sameSite: process.env.VERCEL ? 'none' : 'lax', // на Vercel нужно 'none' для кросс-доменных запросов
+    path: '/'
   }
 }));
+
+/**
+ * Инициализация Passport (аутентификация)
+ */
 app.use(passport.initialize());
 app.use(passport.session());
+
+/**
+ * Логирование запросов (только для отладки, можно убрать в продакшене)
+ */
+if (process.env.NODE_ENV !== 'production') {
+  app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+    next();
+  });
+}
 
 // ===== PASSPORT DISCORD =====
 passport.use(new DiscordStrategy({
