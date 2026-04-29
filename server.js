@@ -11,9 +11,44 @@ const { Client, GatewayIntentBits } = require('discord.js');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// ===== 🔍 ПРОВЕРКА ПЕРЕМЕННЫХ ОКРУЖЕНИЯ (ОБЯЗАТЕЛЬНО) =====
+const requiredEnv = [
+  'DISCORD_CLIENT_ID',
+  'DISCORD_CLIENT_SECRET', 
+  'DISCORD_BOT_TOKEN',
+  'DISCORD_REDIRECT_URI',
+  'SESSION_SECRET'
+];
+
+const missing = requiredEnv.filter(key => !process.env[key]);
+if (missing.length > 0) {
+  console.error('❌ КРИТИЧЕСКАЯ ОШИБКА: Отсутствуют переменные окружения:');
+  missing.forEach(key => console.error(`   • ${key}`));
+  console.error('\n💡 РЕШЕНИЕ:');
+  console.error('   1. Зайди в панель хостинга (Railway/Render/Vercel)');
+  console.error('   2. Открой раздел "Variables" или "Environment"');
+  console.error('   3. Добавь все переменные из таблицы ниже:');
+  console.error('\n   Key                          | Value');
+  console.error('   -----------------------------|----------------------------------');
+  console.error('   DISCORD_CLIENT_ID            | 1107807820604248126');
+  console.error('   DISCORD_CLIENT_SECRET        | [твой_секрет_из_Discord_Portal]');
+  console.error('   DISCORD_BOT_TOKEN            | [твой_токен_бота]');
+  console.error('   DISCORD_REDIRECT_URI         | https://твой-сайт.netlify.app/api/auth/callback');
+  console.error('   SESSION_SECRET               | любой_длинный_секретный_ключ_2024');
+  console.error('   FRONTEND_URL                 | https://твой-сайт.netlify.app');
+  console.error('   PORT                         | 3001');
+  console.error('   NODE_ENV                     | production');
+  console.error('\n   После добавления — перезапусти сервер (Redeploy).');
+  process.exit(1);
+}
+
 // ===== MIDDLEWARE =====
 app.use(cors({ 
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:3001', 
+    process.env.FRONTEND_URL
+  ].filter(Boolean),
   credentials: true 
 }));
 app.use(express.json());
@@ -21,7 +56,7 @@ app.use(express.static('../frontend'));
 
 // ===== SESSION =====
 app.use(session({
-  secret: process.env.SESSION_SECRET,
+  secret: process.env.SESSION_SECRET || 'fallback_secret_change_in_production_2024',
   resave: false,
   saveUninitialized: false,
   cookie: { 
@@ -59,7 +94,10 @@ const bot = new Client({
 
 bot.login(process.env.DISCORD_BOT_TOKEN)
   .then(() => console.log('🤖 Synth Bot online'))
-  .catch(err => console.error('❌ Bot login error:', err));
+  .catch(err => {
+    console.error('❌ Bot login error:', err.message);
+    // Не завершаем процесс — сервер может работать без бота для некоторых эндпоинтов
+  });
 
 // ===== КЭШ И ПОВТОРНЫЕ ЗАПРОСЫ =====
 const guildsCache = new Map();
@@ -91,7 +129,8 @@ app.get('/api/auth/discord', passport.authenticate('discord'));
 app.get('/api/auth/callback',
   passport.authenticate('discord', { failureRedirect: '/' }),
   (req, res) => {
-    res.redirect(`${process.env.FRONTEND_URL}/dashboard.html`);
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    res.redirect(`${frontendUrl}/dashboard.html`);
   }
 );
 
@@ -125,30 +164,26 @@ app.get('/api/user/servers', async (req, res) => {
   const userId = req.user.id;
   const now = Date.now();
   
-  // 🔹 Проверяем кэш (чтобы не долбить API при каждом обновлении)
+  // 🔹 Проверяем кэш
   const cached = guildsCache.get(userId);
   if (cached && (now - cached.timestamp < CACHE_TTL)) {
     return res.json(cached.servers);
   }
   
   try {
-    // 🔹 1. Получаем список серверов пользователя (быстро)
     const response = await fetchWithRetry(
       'https://discord.com/api/users/@me/guilds',
       { Authorization: `Bearer ${req.user.accessToken}` }
     );
     const userGuilds = response.data;
     
-    // 🔹 2. Фильтр прав
     const manageable = userGuilds.filter(g => (parseInt(g.permissions) & 0x20) === 0x20);
     
     const serversWithBot = [];
     
-    // 🔹 3. Проверяем наличие бота (ИСПОЛЬЗУЕМ Promise.all для скорости)
     const checks = manageable.map(async (guild) => {
       let botGuild = bot.guilds.cache.get(guild.id);
       
-      // 🔸 Если нет в кэше — запрашиваем (одиночно)
       if (!botGuild) {
         botGuild = await bot.guilds.fetch(guild.id).catch(() => null);
       }
@@ -158,7 +193,6 @@ app.get('/api/user/servers', async (req, res) => {
           ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=128`
           : null;
         
-        // 🔸 БЕРЕМ ДАННЫЕ ИЗ КЭША (МГНОВЕННО), НЕ ДЕЛАЕМ FETCH УЧАСТНИКОВ
         const memberCount = botGuild.memberCount || botGuild.approximateMemberCount || 0;
         const onlineCount = botGuild.approximatePresenceCount || 0;
 
@@ -169,23 +203,19 @@ app.get('/api/user/servers', async (req, res) => {
           owner: guild.owner,
           permissions: guild.permissions,
           botInstalled: true,
-          memberCount: memberCount, // Теперь это занимает 0 мс
+          memberCount: memberCount,
           onlineCount: onlineCount
         };
       }
       return null;
     });
 
-    // 🔹 4. Ждем выполнения всех проверок параллельно
     const results = await Promise.all(checks);
-    
-    // 🔹 5. Убираем null (серверы без бота)
     const validServers = results.filter(s => s !== null);
     
-    // 🔹 6. Сохраняем в кэш
     guildsCache.set(userId, { servers: validServers, timestamp: now });
     
-    console.log(`✅ Returned ${validServers.length} servers instantly for ${userId}`);
+    console.log(`✅ Returned ${validServers.length} servers for ${userId}`);
     res.json(validServers);
     
   } catch (err) {
@@ -211,7 +241,6 @@ app.get('/api/servers/:guildId/config', async (req, res) => {
   
   if (!guild) return res.status(404).json({ error: 'Bot not in this server' });
   
-  // Демо-конфиг (в продакшене — загрузка из БД)
   res.json({
     guildId,
     guildName: guild.name,
@@ -237,7 +266,6 @@ app.post('/api/servers/:guildId/config', async (req, res) => {
   
   if (!guild) return res.status(404).json({ error: 'Bot not in this server' });
   
-  // Демо: лог в консоль (в продакшене — сохранение в БД)
   console.log(`📝 Config updated for ${guildId}:`, updates);
   
   res.json({ success: true, message: 'Settings saved' });
@@ -248,12 +276,25 @@ app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     bot: bot.isReady(),
-    servers: bot.guilds.cache.size
+    servers: bot.guilds.cache.size,
+    env: {
+      CLIENT_ID_SET: !!process.env.DISCORD_CLIENT_ID,
+      REDIRECT_URI: process.env.DISCORD_REDIRECT_URI,
+      FRONTEND_URL: process.env.FRONTEND_URL
+    }
   });
 });
 
 // ===== START SERVER =====
 app.listen(PORT, () => {
-  console.log(`🚀 Backend running on http://localhost:${PORT}`);
-  console.log(`🌐 Frontend: ${process.env.FRONTEND_URL}`);
+  console.log('🔧 Environment check:');
+  console.log(`   • DISCORD_CLIENT_ID: ${process.env.DISCORD_CLIENT_ID ? '✅' : '❌'}`);
+  console.log(`   • DISCORD_CLIENT_SECRET: ${process.env.DISCORD_CLIENT_SECRET ? '✅' : '❌'}`);
+  console.log(`   • DISCORD_BOT_TOKEN: ${process.env.DISCORD_BOT_TOKEN ? '✅' : '❌'}`);
+  console.log(`   • DISCORD_REDIRECT_URI: ${process.env.DISCORD_REDIRECT_URI || '❌'}`);
+  console.log(`   • SESSION_SECRET: ${process.env.SESSION_SECRET ? '✅' : '❌'}`);
+  console.log(`   • FRONTEND_URL: ${process.env.FRONTEND_URL || '❌'}`);
+  console.log(`\n🚀 Backend running on port ${PORT}`);
+  console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
+  console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
 });
