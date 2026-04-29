@@ -285,39 +285,54 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// ===== START SERVER (УНИВЕРСАЛЬНЫЙ) =====
+// ===== START SERVER (УНИВЕРСАЛЬНЫЙ: Vercel + Railway + Local) =====
 
-// 🔍 Логирование переменных окружения (работает везде)
+/**
+ * Логирование переменных окружения для отладки
+ */
 const logEnv = () => {
-  console.log('🔧 Environment check:');
-  console.log(`   • DISCORD_CLIENT_ID: ${process.env.DISCORD_CLIENT_ID ? '✅' : '❌'}`);
-  console.log(`   • DISCORD_CLIENT_SECRET: ${process.env.DISCORD_CLIENT_SECRET ? '✅' : '❌'}`);
-  console.log(`   • DISCORD_BOT_TOKEN: ${process.env.DISCORD_BOT_TOKEN ? '✅' : '❌'}`);
-  console.log(`   • DISCORD_REDIRECT_URI: ${process.env.DISCORD_REDIRECT_URI || '❌'}`);
-  console.log(`   • SESSION_SECRET: ${process.env.SESSION_SECRET ? '✅' : '❌'}`);
-  console.log(`   • FRONTEND_URL: ${process.env.FRONTEND_URL || '❌'}`);
+  console.log('\n🔧 Environment check:');
+  console.log(`   • DISCORD_CLIENT_ID: ${process.env.DISCORD_CLIENT_ID ? '✅' : '❌ MISSING'}`);
+  console.log(`   • DISCORD_CLIENT_SECRET: ${process.env.DISCORD_CLIENT_SECRET ? '✅' : '❌ MISSING'}`);
+  console.log(`   • DISCORD_BOT_TOKEN: ${process.env.DISCORD_BOT_TOKEN ? '✅' : '❌ MISSING'}`);
+  console.log(`   • DISCORD_REDIRECT_URI: ${process.env.DISCORD_REDIRECT_URI || '❌ MISSING'}`);
+  console.log(`   • SESSION_SECRET: ${process.env.SESSION_SECRET ? '✅' : '❌ MISSING'}`);
+  console.log(`   • FRONTEND_URL: ${process.env.FRONTEND_URL || '❌ MISSING'}`);
   console.log(`   • VERCEL: ${process.env.VERCEL ? '✅ (Serverless)' : '❌ (Traditional)'}`);
   console.log(`   • NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`   • PORT: ${PORT}`);
 };
 
-// 🚀 Запуск в традиционном режиме (Railway, Render, локально)
+/**
+ * Запуск сервера в традиционном режиме (Railway, Render, локально)
+ * На Vercel этот блок пропускается — используется serverless-http handler
+ */
 if (!process.env.VERCEL) {
   logEnv();
   
-  app.listen(PORT, () => {
+  app.listen(PORT, (err) => {
+    if (err) {
+      console.error('❌ Failed to start server:', err.message);
+      process.exit(1);
+    }
+    
+    const frontendUrl = process.env.FRONTEND_URL || `http://localhost:${PORT}`;
     console.log(`\n🚀 Backend running on port ${PORT}`);
-    console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
-    console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
-    console.log(`\n💡 Tip: On Vercel, this block is skipped — using serverless handler instead.`);
+    console.log(`🌐 Frontend URL: ${frontendUrl}`);
+    console.log(`🔗 Health check: ${frontendUrl}/api/health`);
+    console.log(`💡 Tip: On Vercel, this block is skipped — using serverless handler instead.\n`);
   });
 } 
-// ☁️ Экспорт для Vercel Serverless (app.listen() не используется)
+/**
+ * Режим Vercel Serverless — app.listen() не вызывается
+ * Экспортируем app для serverless-http
+ */
 else {
   logEnv();
   console.log(`\n☁️ Running on Vercel Serverless — using serverless-http handler`);
-  console.log(`🔗 Health check: ${process.env.VERCEL_URL || 'https://твой-проект.vercel.app'}/api/health`);
+  console.log(`🔗 Health check: ${process.env.VERCEL_URL || 'https://your-project.vercel.app'}/api/health\n`);
 }
 
-// 📦 Экспорт приложения для serverless-http (Vercel)
-// Этот код не мешает традиционному запуску
+// 📦 Экспорт приложения для serverless-http (Vercel) и тестов
+// Это НЕ ломает традиционный запуск — просто добавляет возможность импорта
 module.exports = app;
