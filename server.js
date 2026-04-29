@@ -11,109 +11,63 @@ const { Client, GatewayIntentBits } = require('discord.js');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// ===== 🔍 ПРОВЕРКА ПЕРЕМЕННЫХ ОКРУЖЕНИЯ (ОБЯЗАТЕЛЬНО) =====
+// ===== 🔍 ПРОВЕРКА ПЕРЕМЕННЫХ ОКРУЖЕНИЯ =====
 const requiredEnv = [
   'DISCORD_CLIENT_ID',
-  'DISCORD_CLIENT_SECRET', 
+  'DISCORD_CLIENT_SECRET',
   'DISCORD_BOT_TOKEN',
   'DISCORD_REDIRECT_URI',
   'SESSION_SECRET'
 ];
 
 const missing = requiredEnv.filter(key => !process.env[key]);
-if (missing.length > 0) {
-  console.error('❌ КРИТИЧЕСКАЯ ОШИБКА: Отсутствуют переменные окружения:');
-  missing.forEach(key => console.error(`   • ${key}`));
-  console.error('\n💡 РЕШЕНИЕ:');
-  console.error('   1. Зайди в панель хостинга (Railway/Render/Vercel)');
-  console.error('   2. Открой раздел "Variables" или "Environment"');
-  console.error('   3. Добавь все переменные из таблицы ниже:');
-  console.error('\n   Key                          | Value');
-  console.error('   -----------------------------|----------------------------------');
-  console.error('   DISCORD_CLIENT_ID            | 1107807820604248126');
-  console.error('   DISCORD_CLIENT_SECRET        | [твой_секрет_из_Discord_Portal]');
-  console.error('   DISCORD_BOT_TOKEN            | [твой_токен_бота]');
-  console.error('   DISCORD_REDIRECT_URI         | https://твой-сайт.netlify.app/api/auth/callback');
-  console.error('   SESSION_SECRET               | любой_длинный_секретный_ключ_2024');
-  console.error('   FRONTEND_URL                 | https://твой-сайт.netlify.app');
-  console.error('   PORT                         | 3001');
-  console.error('   NODE_ENV                     | production');
-  console.error('\n   После добавления — перезапусти сервер (Redeploy).');
-  process.exit(1);
+if (missing.length > 0 && process.env.VERCEL) {
+  console.error('❌ MISSING ENV VARS ON VERCEL:', missing);
+  // Не выбрасываем ошибку — логируем и продолжаем для отладки
 }
 
-// ===== MIDDLEWARE (ОПТИМИЗИРОВАН ДЛЯ VERCEL + FLAT STRUCTURE) =====
-
-/**
- * CORS: разрешаем запросы с фронтенда (локально + Vercel)
- */
-app.use(cors({ 
+// ===== 🌐 MIDDLEWARE =====
+app.use(cors({
   origin: [
     'http://localhost:3000',
     'http://localhost:3001',
-    'https://synth-io.vercel.app',                    // основной домен
-    'https://synth-io-rellikt-ais-projects.vercel.app', // превью-домен
-    /\.vercel\.app$/                                    // все *.vercel.app
+    'https://synth-io.vercel.app',
+    'https://synth-io-rellikt-ais-projects.vercel.app',
+    /\.vercel\.app$/
   ].filter(Boolean),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-/**
- * Парсинг JSON-тел запросов
- */
 app.use(express.json({ limit: '10mb' }));
-
-/**
- * Парсинг URL-encoded данных (для форм)
- */
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-/**
- * ⚠️ СТАТИКА: НЕ используем express.static на Vercel!
- * Vercel сам раздаёт файлы через routes в vercel.json.
- * Для локальной разработки можно раскомментировать:
- */
+// ⚠️ Статика: на Vercel раздаётся через vercel.json, не через Express
 // if (!process.env.VERCEL) {
-//   app.use(express.static('.')); // раздаёт файлы из корня проекта
+//   app.use(express.static('.'));
 // }
 
-/**
- * Сессии: совместимо с serverless (кратковременные)
- * В продакшене для надёжности лучше использовать Redis, но для старта подойдёт и MemoryStore
- */
+// ===== 🔐 SESSION (ИСПРАВЛЕНО ДЛЯ VERCEL) =====
 app.use(session({
   secret: process.env.SESSION_SECRET || 'fallback_secret_change_in_production_2024',
-  name: 'synth.sid', // имя куки
+  name: 'synth.sid',
   resave: false,
   saveUninitialized: false,
   cookie: {
-    maxAge: parseInt(process.env.SESSION_COOKIE_MAX_AGE) || 604800000, // 7 дней
-    secure: process.env.NODE_ENV === 'production' && !process.env.VERCEL, // на Vercel secure может ломать куки
+    maxAge: parseInt(process.env.SESSION_COOKIE_MAX_AGE) || 604800000,
+    // 🔧 КЛЮЧЕВОЕ: на Vercel secure=false, sameSite='lax'
+    secure: process.env.VERCEL ? false : (process.env.NODE_ENV === 'production'),
     httpOnly: true,
-    sameSite: process.env.VERCEL ? 'none' : 'lax', // на Vercel нужно 'none' для кросс-доменных запросов
+    sameSite: 'lax',
     path: '/'
   }
 }));
 
-/**
- * Инициализация Passport (аутентификация)
- */
 app.use(passport.initialize());
 app.use(passport.session());
 
-/**
- * Логирование запросов (только для отладки, можно убрать в продакшене)
- */
-if (process.env.NODE_ENV !== 'production') {
-  app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-    next();
-  });
-}
-
-// ===== PASSPORT DISCORD =====
+// ===== 🎫 PASSPORT DISCORD =====
 passport.use(new DiscordStrategy({
   clientID: process.env.DISCORD_CLIENT_ID,
   clientSecret: process.env.DISCORD_CLIENT_SECRET,
@@ -127,23 +81,25 @@ passport.use(new DiscordStrategy({
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((user, done) => done(null, user));
 
-// ===== DISCORD BOT CLIENT =====
-const bot = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
-  ]
-});
-
-bot.login(process.env.DISCORD_BOT_TOKEN)
-  .then(() => console.log('🤖 Synth Bot online'))
-  .catch(err => {
-    console.error('❌ Bot login error:', err.message);
-    // Не завершаем процесс — сервер может работать без бота для некоторых эндпоинтов
+// ===== 🤖 DISCORD BOT CLIENT =====
+let bot = null;
+try {
+  bot = new Client({
+    intents: [
+      GatewayIntentBits.Guilds,
+      GatewayIntentBits.GuildMessages,
+      GatewayIntentBits.MessageContent
+    ]
   });
 
-// ===== КЭШ И ПОВТОРНЫЕ ЗАПРОСЫ =====
+  bot.login(process.env.DISCORD_BOT_TOKEN)
+    .then(() => console.log('🤖 Synth Bot online'))
+    .catch(err => console.error('❌ Bot login error:', err.message));
+} catch (e) {
+  console.warn('⚠️ Bot client not initialized:', e.message);
+}
+
+// ===== ⚡ КЭШ И ПОВТОРНЫЕ ЗАПРОСЫ =====
 const guildsCache = new Map();
 const CACHE_TTL = 60000; // 60 секунд
 
@@ -154,7 +110,7 @@ async function fetchWithRetry(url, headers, maxRetries = 3) {
     } catch (err) {
       if (err.response?.status === 429 && err.response.data?.retry_after) {
         const wait = err.response.data.retry_after * 1000 + 50;
-        console.log(`⏳ Rate limit, ждём ${wait}ms... (${attempt+1}/${maxRetries})`);
+        console.log(`⏳ Rate limit, waiting ${wait}ms... (${attempt+1}/${maxRetries})`);
         await new Promise(res => setTimeout(res, wait));
         continue;
       }
@@ -164,17 +120,36 @@ async function fetchWithRetry(url, headers, maxRetries = 3) {
   throw new Error('Max retries exceeded');
 }
 
-// ===== API ROUTES =====
+// ===== 🛣️ API ROUTES =====
 
-// 1. Start OAuth
-app.get('/api/auth/discord', passport.authenticate('discord'));
+// 1. Start OAuth (с обработкой ошибок)
+app.get('/api/auth/discord', (req, res, next) => {
+  try {
+    if (!process.env.DISCORD_CLIENT_ID || !process.env.DISCORD_CLIENT_SECRET) {
+      console.error('❌ Discord OAuth credentials missing');
+      return res.status(500).json({ error: 'Server configuration error' });
+    }
+    passport.authenticate('discord')(req, res, next);
+  } catch (err) {
+    console.error('❌ OAuth start error:', err.message);
+    res.status(500).json({ error: 'Authentication failed', details: err.message });
+  }
+});
 
 // 2. OAuth Callback
 app.get('/api/auth/callback',
-  passport.authenticate('discord', { failureRedirect: '/' }),
+  passport.authenticate('discord', { 
+    failureRedirect: '/',
+    failureMessage: true
+  }),
   (req, res) => {
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    res.redirect(`${frontendUrl}/dashboard.html`);
+    try {
+      const frontendUrl = process.env.FRONTEND_URL || 'https://synth-io.vercel.app';
+      res.redirect(`${frontendUrl}/dashboard.html`);
+    } catch (err) {
+      console.error('❌ OAuth callback error:', err.message);
+      res.status(500).json({ error: 'Redirect failed' });
+    }
   }
 );
 
@@ -194,14 +169,18 @@ app.get('/api/auth/me', (req, res) => {
 });
 
 // 4. Logout
-app.get('/api/auth/logout', (req, res) => {
-  req.logout(err => {
-    if (err) return res.status(500).json({ error: 'Logout failed' });
+app.get('/api/auth/logout', (req, res, next) => {
+  req.logout((err) => {
+    if (err) {
+      console.error('❌ Logout error:', err.message);
+      return res.status(500).json({ error: 'Logout failed' });
+    }
+    res.clearCookie('synth.sid');
     res.json({ success: true });
   });
 });
 
-// 5. Get user's servers WITH BOT INSTALLED (ОПТИМИЗИРОВАННЫЙ - БЫСТРЫЙ)
+// 5. Get user's servers WITH BOT INSTALLED
 app.get('/api/user/servers', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
   
@@ -221,14 +200,16 @@ app.get('/api/user/servers', async (req, res) => {
     );
     const userGuilds = response.data;
     
+    // 🔹 Фильтр: только сервера с правами MANAGE_GUILD (0x20)
     const manageable = userGuilds.filter(g => (parseInt(g.permissions) & 0x20) === 0x20);
     
     const serversWithBot = [];
     
+    // 🔹 Проверяем наличие бота
     const checks = manageable.map(async (guild) => {
-      let botGuild = bot.guilds.cache.get(guild.id);
+      let botGuild = bot?.guilds?.cache?.get(guild.id);
       
-      if (!botGuild) {
+      if (!botGuild && bot?.isReady()) {
         botGuild = await bot.guilds.fetch(guild.id).catch(() => null);
       }
       
@@ -237,9 +218,6 @@ app.get('/api/user/servers', async (req, res) => {
           ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=128`
           : null;
         
-        const memberCount = botGuild.memberCount || botGuild.approximateMemberCount || 0;
-        const onlineCount = botGuild.approximatePresenceCount || 0;
-
         return {
           id: guild.id,
           name: guild.name,
@@ -247,16 +225,27 @@ app.get('/api/user/servers', async (req, res) => {
           owner: guild.owner,
           permissions: guild.permissions,
           botInstalled: true,
-          memberCount: memberCount,
-          onlineCount: onlineCount
+          memberCount: botGuild.memberCount || botGuild.approximateMemberCount || 0,
+          onlineCount: botGuild.approximatePresenceCount || 0
         };
       }
-      return null;
+      // Если бота нет в кэше — всё равно возвращаем сервер (пользователь может добавить бота)
+      return {
+        id: guild.id,
+        name: guild.name,
+        icon: guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=128` : null,
+        owner: guild.owner,
+        permissions: guild.permissions,
+        botInstalled: false,
+        memberCount: 0,
+        onlineCount: 0
+      };
     });
 
     const results = await Promise.all(checks);
     const validServers = results.filter(s => s !== null);
     
+    // 🔹 Сохраняем в кэш
     guildsCache.set(userId, { servers: validServers, timestamp: now });
     
     console.log(`✅ Returned ${validServers.length} servers for ${userId}`);
@@ -281,13 +270,11 @@ app.get('/api/servers/:guildId/config', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
   
   const { guildId } = req.params;
-  const guild = bot.guilds.cache.get(guildId);
   
-  if (!guild) return res.status(404).json({ error: 'Bot not in this server' });
-  
+  // Демо-конфиг (в продакшене — загрузка из БД)
   res.json({
     guildId,
-    guildName: guild.name,
+    guildName: 'Server',
     prefix: '!',
     modules: {
       embedBuilder: { enabled: true, allowGif: false },
@@ -306,12 +293,10 @@ app.post('/api/servers/:guildId/config', async (req, res) => {
   
   const { guildId } = req.params;
   const updates = req.body;
-  const guild = bot.guilds.cache.get(guildId);
-  
-  if (!guild) return res.status(404).json({ error: 'Bot not in this server' });
   
   console.log(`📝 Config updated for ${guildId}:`, updates);
   
+  // Демо: лог в консоль (в продакшене — сохранение в БД)
   res.json({ success: true, message: 'Settings saved' });
 });
 
@@ -319,37 +304,37 @@ app.post('/api/servers/:guildId/config', async (req, res) => {
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
-    bot: bot.isReady(),
-    servers: bot.guilds.cache.size,
+    bot: bot?.isReady() || false,
+    servers: bot?.guilds?.cache?.size || 0,
     env: {
       CLIENT_ID_SET: !!process.env.DISCORD_CLIENT_ID,
       REDIRECT_URI: process.env.DISCORD_REDIRECT_URI,
-      FRONTEND_URL: process.env.FRONTEND_URL
+      FRONTEND_URL: process.env.FRONTEND_URL,
+      VERCEL: !!process.env.VERCEL
     }
   });
 });
 
-// ===== START SERVER (УНИВЕРСАЛЬНЫЙ: Vercel + Railway + Local) =====
+// ===== 🚀 START SERVER (УНИВЕРСАЛЬНЫЙ) =====
 
 /**
- * Логирование переменных окружения для отладки
+ * Логирование переменных окружения
  */
 const logEnv = () => {
   console.log('\n🔧 Environment check:');
-  console.log(`   • DISCORD_CLIENT_ID: ${process.env.DISCORD_CLIENT_ID ? '✅' : '❌ MISSING'}`);
-  console.log(`   • DISCORD_CLIENT_SECRET: ${process.env.DISCORD_CLIENT_SECRET ? '✅' : '❌ MISSING'}`);
-  console.log(`   • DISCORD_BOT_TOKEN: ${process.env.DISCORD_BOT_TOKEN ? '✅' : '❌ MISSING'}`);
-  console.log(`   • DISCORD_REDIRECT_URI: ${process.env.DISCORD_REDIRECT_URI || '❌ MISSING'}`);
-  console.log(`   • SESSION_SECRET: ${process.env.SESSION_SECRET ? '✅' : '❌ MISSING'}`);
-  console.log(`   • FRONTEND_URL: ${process.env.FRONTEND_URL || '❌ MISSING'}`);
+  console.log(`   • DISCORD_CLIENT_ID: ${process.env.DISCORD_CLIENT_ID ? '✅' : '❌'}`);
+  console.log(`   • DISCORD_CLIENT_SECRET: ${process.env.DISCORD_CLIENT_SECRET ? '✅' : '❌'}`);
+  console.log(`   • DISCORD_BOT_TOKEN: ${process.env.DISCORD_BOT_TOKEN ? '✅' : '❌'}`);
+  console.log(`   • DISCORD_REDIRECT_URI: ${process.env.DISCORD_REDIRECT_URI || '❌'}`);
+  console.log(`   • SESSION_SECRET: ${process.env.SESSION_SECRET ? '✅' : '❌'}`);
+  console.log(`   • FRONTEND_URL: ${process.env.FRONTEND_URL || '❌'}`);
   console.log(`   • VERCEL: ${process.env.VERCEL ? '✅ (Serverless)' : '❌ (Traditional)'}`);
   console.log(`   • NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
   console.log(`   • PORT: ${PORT}`);
 };
 
 /**
- * Запуск сервера в традиционном режиме (Railway, Render, локально)
- * На Vercel этот блок пропускается — используется serverless-http handler
+ * Запуск в традиционном режиме (Railway, Render, локально)
  */
 if (!process.env.VERCEL) {
   logEnv();
@@ -363,20 +348,16 @@ if (!process.env.VERCEL) {
     const frontendUrl = process.env.FRONTEND_URL || `http://localhost:${PORT}`;
     console.log(`\n🚀 Backend running on port ${PORT}`);
     console.log(`🌐 Frontend URL: ${frontendUrl}`);
-    console.log(`🔗 Health check: ${frontendUrl}/api/health`);
-    console.log(`💡 Tip: On Vercel, this block is skipped — using serverless handler instead.\n`);
+    console.log(`🔗 Health check: ${frontendUrl}/api/health\n`);
   });
 } 
 /**
  * Режим Vercel Serverless — app.listen() не вызывается
- * Экспортируем app для serverless-http
  */
 else {
   logEnv();
-  console.log(`\n☁️ Running on Vercel Serverless — using serverless-http handler`);
-  console.log(`🔗 Health check: ${process.env.VERCEL_URL || 'https://your-project.vercel.app'}/api/health\n`);
+  console.log(`\n☁️ Running on Vercel Serverless — using serverless-http handler\n`);
 }
 
-// 📦 Экспорт приложения для serverless-http (Vercel) и тестов
-// Это НЕ ломает традиционный запуск — просто добавляет возможность импорта
+// 📦 Экспорт для serverless-http (Vercel) и тестов
 module.exports = app;
