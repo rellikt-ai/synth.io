@@ -11,8 +11,16 @@
       "dest": "/api/index.js"
     },
     {
+      "src": "/dashboard.html",
+      "dest": "/frontend/dashboard.html"
+    },
+    {
+      "src": "/config.html",
+      "dest": "/frontend/config.html"
+    },
+    {
       "src": "/(.*)",
-      "dest": "/frontend/$1"
+      "dest": "/frontend/index.html"
     }
   ]
 }
