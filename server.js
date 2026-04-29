@@ -285,8 +285,10 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// ===== START SERVER =====
-app.listen(PORT, () => {
+// ===== START SERVER (УНИВЕРСАЛЬНЫЙ) =====
+
+// 🔍 Логирование переменных окружения (работает везде)
+const logEnv = () => {
   console.log('🔧 Environment check:');
   console.log(`   • DISCORD_CLIENT_ID: ${process.env.DISCORD_CLIENT_ID ? '✅' : '❌'}`);
   console.log(`   • DISCORD_CLIENT_SECRET: ${process.env.DISCORD_CLIENT_SECRET ? '✅' : '❌'}`);
@@ -294,7 +296,28 @@ app.listen(PORT, () => {
   console.log(`   • DISCORD_REDIRECT_URI: ${process.env.DISCORD_REDIRECT_URI || '❌'}`);
   console.log(`   • SESSION_SECRET: ${process.env.SESSION_SECRET ? '✅' : '❌'}`);
   console.log(`   • FRONTEND_URL: ${process.env.FRONTEND_URL || '❌'}`);
-  console.log(`\n🚀 Backend running on port ${PORT}`);
-  console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
-});
+  console.log(`   • VERCEL: ${process.env.VERCEL ? '✅ (Serverless)' : '❌ (Traditional)'}`);
+  console.log(`   • NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
+};
+
+// 🚀 Запуск в традиционном режиме (Railway, Render, локально)
+if (!process.env.VERCEL) {
+  logEnv();
+  
+  app.listen(PORT, () => {
+    console.log(`\n🚀 Backend running on port ${PORT}`);
+    console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
+    console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
+    console.log(`\n💡 Tip: On Vercel, this block is skipped — using serverless handler instead.`);
+  });
+} 
+// ☁️ Экспорт для Vercel Serverless (app.listen() не используется)
+else {
+  logEnv();
+  console.log(`\n☁️ Running on Vercel Serverless — using serverless-http handler`);
+  console.log(`🔗 Health check: ${process.env.VERCEL_URL || 'https://твой-проект.vercel.app'}/api/health`);
+}
+
+// 📦 Экспорт приложения для serverless-http (Vercel)
+// Этот код не мешает традиционному запуску
+module.exports = app;
