@@ -1,6 +1,6 @@
-// api/index.js
+// api/index.js — точка входа для Vercel Serverless
 const serverless = require('serverless-http');
-const app = require('../server'); // Импортируем основной Express-приложение
+const app = require('../server'); // Импортируем Express-приложение
 
-// Экспортируем handler для Vercel Serverless
-module.exports.handler = serverless(app);
+// ✅ ПРАВИЛЬНЫЙ ЭКСПОРТ ДЛЯ VERCEL: дефолтная функция-обработчик
+module.exports = serverless(app);
