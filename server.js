@@ -11,6 +11,9 @@ const { Client, GatewayIntentBits } = require('discord.js');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// 🔧 ВАЖНО ДЛЯ VERCEL: доверяй прокси для корректной работы куки/сессий
+app.set('trust proxy', 1);
+
 // ===== 🔍 ПРОВЕРКА ПЕРЕМЕННЫХ ОКРУЖЕНИЯ =====
 const requiredEnv = [
   'DISCORD_CLIENT_ID',
@@ -21,9 +24,10 @@ const requiredEnv = [
 ];
 
 const missing = requiredEnv.filter(key => !process.env[key]);
-if (missing.length > 0 && process.env.VERCEL) {
-  console.error('❌ MISSING ENV VARS ON VERCEL:', missing);
-  // Не выбрасываем ошибку — логируем и продолжаем для отладки
+if (missing.length > 0) {
+  console.error('❌ MISSING ENV VARS:', missing);
+  console.error('💡 Добавь их в Vercel → Settings → Environment Variables');
+  // Не завершаем процесс — для отладки в серверлесс
 }
 
 // ===== 🌐 MIDDLEWARE =====
@@ -43,23 +47,18 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// ⚠️ Статика: на Vercel раздаётся через vercel.json, не через Express
-// if (!process.env.VERCEL) {
-//   app.use(express.static('.'));
-// }
-
 // ===== 🔐 SESSION (ИСПРАВЛЕНО ДЛЯ VERCEL) =====
 app.use(session({
   secret: process.env.SESSION_SECRET || 'fallback_secret_change_in_production_2024',
   name: 'synth.sid',
   resave: false,
   saveUninitialized: false,
+  proxy: true, // 🔧 Важно для Vercel
   cookie: {
     maxAge: parseInt(process.env.SESSION_COOKIE_MAX_AGE) || 604800000,
-    // 🔧 КЛЮЧЕВОЕ: на Vercel secure=false, sameSite='lax'
-    secure: process.env.VERCEL ? false : (process.env.NODE_ENV === 'production'),
+    secure: false, // 🔧 Vercel сам обрабатывает HTTPS
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: 'lax', // 🔧 Разрешает кросс-доменные запросы
     path: '/'
   }
 }));
@@ -122,32 +121,67 @@ async function fetchWithRetry(url, headers, maxRetries = 3) {
 
 // ===== 🛣️ API ROUTES =====
 
-// 1. Start OAuth (с обработкой ошибок)
+// 1. Start OAuth — с логированием и обработкой ошибок для Vercel
 app.get('/api/auth/discord', (req, res, next) => {
-  try {
-    if (!process.env.DISCORD_CLIENT_ID || !process.env.DISCORD_CLIENT_SECRET) {
-      console.error('❌ Discord OAuth credentials missing');
-      return res.status(500).json({ error: 'Server configuration error' });
+  console.log('🔐 [OAuth Start] Request received', {
+    url: req.url,
+    headers: { host: req.headers.host, origin: req.headers.origin },
+    session: req.session?.id ? '✅' : '❌',
+    env: {
+      CLIENT_ID_SET: !!process.env.DISCORD_CLIENT_ID,
+      REDIRECT_URI: process.env.DISCORD_REDIRECT_URI
     }
-    passport.authenticate('discord')(req, res, next);
+  });
+
+  if (!process.env.DISCORD_CLIENT_ID || !process.env.DISCORD_CLIENT_SECRET) {
+    console.error('❌ [OAuth] Missing credentials');
+    return res.status(500).json({ error: 'Server configuration error: missing Discord credentials' });
+  }
+
+  try {
+    passport.authenticate('discord', {
+      session: true,
+      failureRedirect: '/',
+      failureMessage: true,
+      prompt: 'none'
+    })(req, res, (err) => {
+      if (err) {
+        console.error('❌ [OAuth] Passport error:', err.message);
+        return res.status(500).json({ error: 'Authentication failed', details: err.message });
+      }
+      next();
+    });
   } catch (err) {
-    console.error('❌ OAuth start error:', err.message);
-    res.status(500).json({ error: 'Authentication failed', details: err.message });
+    console.error('❌ [OAuth] Unexpected error:', err.message, err.stack);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// 2. OAuth Callback
+// 2. OAuth Callback — с детальным логированием
 app.get('/api/auth/callback',
-  passport.authenticate('discord', { 
+  (req, res, next) => {
+    console.log('🔐 [OAuth Callback] Request received', {
+      query: Object.keys(req.query),
+      session: req.session?.id ? '✅' : '❌'
+    });
+    next();
+  },
+  passport.authenticate('discord', {
     failureRedirect: '/',
-    failureMessage: true
+    failureMessage: true,
+    failureFlash: true
   }),
   (req, res) => {
     try {
+      console.log('✅ [OAuth] Success, user:', req.user?.username, req.user?.id);
+      
       const frontendUrl = process.env.FRONTEND_URL || 'https://synth-io.vercel.app';
-      res.redirect(`${frontendUrl}/dashboard.html`);
+      const redirectUrl = `${frontendUrl}/dashboard.html`;
+      
+      console.log('🔄 [OAuth] Redirecting to:', redirectUrl);
+      res.redirect(302, redirectUrl);
     } catch (err) {
-      console.error('❌ OAuth callback error:', err.message);
+      console.error('❌ [OAuth] Redirect error:', err.message);
       res.status(500).json({ error: 'Redirect failed' });
     }
   }
@@ -229,7 +263,7 @@ app.get('/api/user/servers', async (req, res) => {
           onlineCount: botGuild.approximatePresenceCount || 0
         };
       }
-      // Если бота нет в кэше — всё равно возвращаем сервер (пользователь может добавить бота)
+      // Если бота нет в кэше — всё равно возвращаем сервер
       return {
         id: guild.id,
         name: guild.name,
@@ -317,9 +351,6 @@ app.get('/api/health', (req, res) => {
 
 // ===== 🚀 START SERVER (УНИВЕРСАЛЬНЫЙ) =====
 
-/**
- * Логирование переменных окружения
- */
 const logEnv = () => {
   console.log('\n🔧 Environment check:');
   console.log(`   • DISCORD_CLIENT_ID: ${process.env.DISCORD_CLIENT_ID ? '✅' : '❌'}`);
@@ -333,10 +364,8 @@ const logEnv = () => {
   console.log(`   • PORT: ${PORT}`);
 };
 
-/**
- * Запуск в традиционном режиме (Railway, Render, локально)
- */
 if (!process.env.VERCEL) {
+  // 🔹 Традиционный режим (Railway, Render, локально)
   logEnv();
   
   app.listen(PORT, (err) => {
@@ -350,11 +379,8 @@ if (!process.env.VERCEL) {
     console.log(`🌐 Frontend URL: ${frontendUrl}`);
     console.log(`🔗 Health check: ${frontendUrl}/api/health\n`);
   });
-} 
-/**
- * Режим Vercel Serverless — app.listen() не вызывается
- */
-else {
+} else {
+  // 🔹 Режим Vercel Serverless — app.listen() не вызывается
   logEnv();
   console.log(`\n☁️ Running on Vercel Serverless — using serverless-http handler\n`);
 }
