@@ -143,14 +143,13 @@
         </div>`).join('');
     }
 
-    // ===== SELECT SERVER =====
+    // ===== SELECT SERVER — REDIRECT TO CONFIG =====
     function selectServer(id, name) {
       showToast(`Открываю: ${name}`);
-      setTimeout(() => {
-        // В реальном проекте: переход на config.html
-        // window.location.href = `/config.html?server=${id}`;
-        alert(`🎛️ Панель настройки для "${name}"\n\nЗдесь будут:\n• Embed Builder\n• Тикеты\n• Модерация`);
-      }, 500);
+      // Сохраняем имя сервера для отображения на следующей странице
+      localStorage.setItem('synth_server_name', name);
+      // Переход на страницу настройки
+      window.location.href = `config.html?server=${id}`;
     }
 
     // ===== LOGOUT =====
