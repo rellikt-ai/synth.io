@@ -1,2 +1,1 @@
-# synth.io
-Kinetic Corp.
+
