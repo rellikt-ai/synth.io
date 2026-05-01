@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Synth — Discord Bot</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container" style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+      <a href="#" class="logo">SYNTH</a>
+      <nav class="nav">
+        <a href="#features" class="nav-link">Возможности</a>
+        <a href="#interface" class="nav-link">Интерфейс</a>
+        <a href="#pricing" class="nav-link">Тарифы</a>
+        <a href="#faq" class="nav-link">FAQ</a>
+        <a href="https://synthbots.netlify.app/.netlify/functions/discord" class="btn btn-primary">Войти</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero container">
+      <div class="badge">✨ v3.0 — Новое обновление</div>
+      <h1>Многофункциональный Discord-бот</h1>
+      <p>Эмбеды, тикеты, модерация и аналитика — всё в одном.</p>
+      <div class="hero-actions">
+        <a href="https://discord.com/api/oauth2/authorize?client_id=1107807820604248126&permissions=8&scope=bot%20applications.commands" class="btn btn-primary">Добавить на сервер</a>
+      </div>
+    </section>
+
+    <section id="features" class="section container">
+      <div class="section-header">
+        <div class="section-label">ВОЗМОЖНОСТИ</div>
+        <h2 class="section-title">Инструменты для роста сервера</h2>
+        <p class="section-sub">Каждая функция создана, чтобы упростить управление и повысить вовлечённость участников.</p>
+      </div>
+      <div class="grid">
+        <div class="card"><h3>Embed Builder</h3><p>Визуальный конструктор эмбедов. Поддержка GIF, кастомных цветов, полей и интерактивных кнопок без единой строки кода.</p></div>
+        <div class="card"><h3>Тикет-система</h3><p>Гибкие категории, приватные каналы, транскрипты и красивые панели с GIF. Идеально для поддержки, жалоб и наборов.</p></div>
+        <div class="card"><h3>/clear & Модерация</h3><p>Мгновенная очистка чата, фильтры ссылок, анти-рейд и умные логи действий. Держите порядок на сервере автоматически.</p></div>
+        <div class="card"><h3>AutoGiveRole</h3><p>Автоматическая выдача ролей при входе, достижении уровня или выполнении условий. Гибкая настройка триггеров.</p></div>
+        <div class="card"><h3>InviteLogger</h3><p>Точный трекинг приглашений: кто привёл, по какой ссылке, сколько осталось. Защита от фейковых инвайтов и накруток.</p></div>
+        <div class="card"><h3>ChatterMetrics</h3><p>Продвинутый анти-спам и анализ активности. Выявляет подозрительные паттерны, мутит нарушителей и защищает чат от флуда.</p></div>
+      </div>
+    </section>
+
+    <section id="interface" class="section container">
+      <div class="section-header">
+        <div class="section-label">ВИЗУАЛЬНЫЙ КОНСТРУКТОР</div>
+        <h2 class="section-title">Создавайте без кода</h2>
+        <p class="section-sub">Два примера того, как выглядят эмбеды и панели, созданные через Synth. GIF, кнопки и стиль — всё настраивается в пару кликов.</p>
+      </div>
+      <div class="mock-container">
+        <div class="mock-discord">
+          <div class="mock-header">
+            <div class="mock-avatar">S</div>
+            <div class="mock-info">
+              <div class="mock-username">SynthBOT <span class="bot-tag">BOT</span></div>
+              <div class="mock-timestamp">сегодня в 14:20</div>
+            </div>
+          </div>
+          <div class="mock-content">
+            <div class="mock-message">🎉 <strong>Обновление v3.0 уже здесь!</strong></div>
+            <p class="mock-text">Мы добавили поддержку анимированных GIF в конструкторе, новые неоновые темы и улучшенную производительность.</p>
+            <div class="mock-embed-card"><div class="embed-gif">GIF Preview</div></div>
+            <div class="mock-buttons-row">
+              <button class="discord-btn discord-btn-blue">📥 Скачать</button>
+              <button class="discord-btn discord-btn-gray">🔗 Ссылка</button>
+              <button class="discord-btn discord-btn-green">⭐ Оценить</button>
+            </div>
+          </div>
+          <div class="mock-footer">✨ Пример анонса с анимированным баннером и интерактивными кнопками</div>
+        </div>
+
+        <div class="mock-discord">
+          <div class="mock-header">
+            <div class="mock-avatar">S</div>
+            <div class="mock-info">
+              <div class="mock-username">SynthBOT <span class="bot-tag">BOT</span></div>
+              <div class="mock-timestamp">сегодня в 16:45</div>
+            </div>
+          </div>
+          <div class="mock-content">
+            <div class="mock-message">️ <strong>Набор в клан "NEON STRIKERS"</strong></div>
+            <p class="mock-text">Ищем активных игроков для турниров и рейтинговых матчей. Требования: 18+, опыт в CS2/Valorant, наличие микрофона.</p>
+            <div class="mock-requirements">
+              <div class="req-title"> Требования:</div>
+              <ul class="req-list">
+                <li><span class="check">✓</span> 18+ лет</li>
+                <li><span class="check">✓</span> Опыт в CS2/Valorant</li>
+                <li><span class="check">✓</span> Наличие микрофона</li>
+              </ul>
+            </div>
+            <div class="mock-embed-card"><div class="embed-gif">Баннер клана</div></div>
+            <div class="mock-buttons-row">
+              <button class="discord-btn discord-btn-purple">📝 Подать заявку</button>
+              <button class="discord-btn discord-btn-gray">📜 Правила</button>
+              <button class="discord-btn discord-btn-gray">❌ Закрыть</button>
+            </div>
+          </div>
+          <div class="mock-footer">🎫 Пример тикет-панели для набора людей с требованиями и кнопками действий</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="pricing" class="section container">
+      <div class="section-header">
+        <div class="section-label">ТАРИФЫ</div>
+        <h2 class="section-title">Выберите свой план</h2>
+        <p class="section-sub">Начните бесплатно или получите максимум возможностей</p>
+      </div>
+      <div class="pricing-grid">
+        <div class="price-card">
+          <h3>Free</h3>
+          <p class="price-desc">Для небольших серверов</p>
+          <div class="price-amount">$0<span>/месяц</span></div>
+          <ul class="price-features">
+            <li>Embed Builder (white/blue, без GIF)</li>
+            <li>Tickets (без GIF)</li>
+            <li>/clear — очистка сообщений</li>
+            <li>AutoGiveRole</li>
+            <li>1 сервер</li>
+          </ul>
+          <button class="btn">Начать бесплатно</button>
+        </div>
+        <div class="price-card featured">
+          <span class="popular-badge">ПОПУЛЯРНЫЙ</span>
+          <h3>Premium</h3>
+          <p class="price-desc">Для растущих сообществ</p>
+          <div class="price-amount">$2.99<span>/месяц</span></div>
+          <ul class="price-features">
+            <li>Полный доступ к Embed Builder</li>
+            <li>Полный доступ к Tickets</li>
+            <li>/clear — очистка сообщений</li>
+            <li>AutoGiveRole</li>
+            <li>Безлимитное количество серверов</li>
+            <li>Подарить подписку (24 часа)</li>
+            <li>ChatterMetrics (анти-спам)</li>
+            <li>InviteLogger (трекер приглашений)</li>
+            <li>Приоритетная поддержка</li>
+          </ul>
+          <button class="btn btn-primary">Оформить Premium</button>
+        </div>
+      </div>
+      <p class="price-note">Все тарифы включают 7-дневный пробный период Premium. Отмена в любое время.</p>
+    </section>
+
+    <section id="faq" class="section container">
+      <div class="section-header">
+        <div class="section-label">FAQ</div>
+        <h2 class="section-title">Частые вопросы</h2>
+      </div>
+      <div class="faq-grid">
+        <div class="faq-item"><h3>Как добавить Synth на свой сервер?</h3><p>Нажмите кнопку «Добавить на сервер» на нашем сайте, авторизуйтесь через Discord, выберите сервер и подтвердите права. Бот начнёт работать мгновенно.</p></div>
+        <div class="faq-item"><h3>Synth бесплатный?</h3><p>Да, все основные функции бесплатны. Премиум-тариф ($2.99/мес) открывает дополнительные возможности: полный доступ к Embed Builder, безлимитные сервера, ChatterMetrics, InviteLogger и приоритетную поддержку.</p></div>
+        <div class="faq-item"><h3>Какие права нужны боту?</h3><p>Для работы боту нужны базовые права: отправка сообщений, чтение истории сообщений, управление ролями, подключение к голосовым каналам. Полный список прав отображается при добавлении.</p></div>
+        <div class="faq-item"><h3>Как связаться с поддержкой?</h3><p>Присоединяйтесь к нашему Discord-серверу поддержки. Там есть разделы для баг-репортов, запросов функций и общий чат. Среднее время ответа — 30 минут.</p></div>
+      </div>
+    </section>
+
+    <div class="container">
+      <div class="cta-section">
+        <div class="cta-content">
+          <h2>Готовы преобразить свой сервер?</h2>
+          <p>Присоединяйтесь к тысячам сообществ, которые уже используют Synth. Начните бесплатно прямо сейчас — настройка займёт меньше минуты.</p>
+          <div class="hero-actions">
+            <a href="https://discord.com/api/oauth2/authorize?client_id=1107807820604248126&permissions=8&scope=bot%20applications.commands" class="btn btn-primary">Добавить Synth</a>
+            <a href="https://discord.gg/UVp7gW23nw" class="btn">Сервер поддержки</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer container">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <a href="/" class="logo">SYNTH</a>
+        <p style="color:var(--text-muted); font-size:.9rem; margin-top:12px; line-height:1.5;">Мощный, быстрый и стильный Discord-бот. Создан сообществом, для сообщества.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Ссылки</h4>
+        <a href="#features">Возможности</a>
+        <a href="#interface">Интерфейс</a>
+        <a href="#pricing">Тарифы</a>
+        <a href="#">Статус</a>
+      </div>
+      <div class="footer-col">
+        <h4>Правовая информация</h4>
+        <a href="#">Условия использования</a>
+        <a href="#">Конфиденциальность</a>
+        <a href="#">Cookie Policy</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-tagline">
+        <span>Сделано с <span class="heart">♥</span> для Discord-комьюнити</span>
+        <span>• Бесплатно навсегда • Kinetic Corp © 2024</span>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
